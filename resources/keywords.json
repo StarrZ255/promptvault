@@ -1,0 +1,12 @@
+{
+  "code":          ["fonction", "debug", "variable", "script", "algorithm", "code", "refactor", "typescript", "javascript", "python", "bug", "api", "développement", "programmer", "backend", "frontend", "database"],
+  "securite":      ["vulnérabilité", "exploit", "pentest", "cve", "owasp", "chiffrement", "firewall", "injection", "xss", "csrf", "hacking", "cybersécurité", "audit", "sécurité", "authentification"],
+  "notebooklm":    ["corpus", "sources", "notebook", "citations", "documents uploadés", "notebooklm", "google notebook"],
+  "recherche":     ["analyse", "synthèse", "résumé", "littérature", "hypothèse", "étude", "rapport", "données", "tableau", "comparaison", "benchmark", "recherche"],
+  "apprentissage": ["révision", "examen", "cours", "fiche", "mémorisation", "exercice", "quiz", "étudier", "apprendre", "comprendre", "expliquer"],
+  "redaction":     ["rédige", "écris", "article", "blog", "email", "contenu", "texte", "newsletter", "copywriting", "rédaction", "correction"],
+  "productivite":  ["productivité", "efficacité", "tâche", "planning", "agenda", "organisation", "workflow", "automatiser", "optimiser", "gagner du temps"],
+  "business":      ["stratégie", "business", "marché", "client", "produit", "startup", "b2b", "saas", "pitch", "roadmap", "okr", "kpi"],
+  "creativite":    ["créativité", "idée", "brainstorm", "innovation", "design", "concept", "créatif", "imagination", "histoire", "personnage"],
+  "personnel":     ["objectif", "habitude", "journal", "réflexion", "bilan", "développement personnel", "motivation", "coaching"]
+}
