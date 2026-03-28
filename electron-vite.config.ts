@@ -1,40 +1,34 @@
 import { resolve } from 'path';
-import { builtinModules } from 'module';
-import { defineConfig } from 'electron-vite';
+import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
 import react from '@vitejs/plugin-react';
-
-// Externalise TOUT ce qui n'est pas un import relatif/absolu (= tous les node_modules + built-ins)
-const externalAll = (id: string) =>
-  builtinModules.includes(id) ||
-  builtinModules.includes(id.replace('node:', '')) ||
-  id.startsWith('electron') ||
-  (!id.startsWith('.') && !id.startsWith('/') && !id.startsWith('C:\\') && !id.startsWith('C:/'));
 
 export default defineConfig({
   main: {
+    plugins: [externalizeDepsPlugin()],
     build: {
-      lib: {
-        entry: resolve('src/main/main.ts'),
-        formats: ['cjs'],
-      },
+      // NE PAS utiliser build.lib — en mode lib, Vite bundle tout.
+      // rollupOptions.input + externalizeDepsPlugin = externalisation correcte des node_modules.
       rollupOptions: {
-        external: externalAll,
+        input: {
+          main: resolve('src/main/main.ts'),
+        },
         output: {
-          entryFileNames: 'main.js',
+          format: 'cjs',
+          entryFileNames: '[name].js',
         },
       },
     },
   },
   preload: {
+    plugins: [externalizeDepsPlugin()],
     build: {
-      lib: {
-        entry: resolve('src/preload/index.ts'),
-        formats: ['cjs'],
-      },
       rollupOptions: {
-        external: externalAll,
+        input: {
+          index: resolve('src/preload/index.ts'),
+        },
         output: {
-          entryFileNames: 'index.js',
+          format: 'cjs',
+          entryFileNames: '[name].js',
         },
       },
     },
