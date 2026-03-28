@@ -36,14 +36,20 @@ contextBridge.exposeInMainWorld('vault', {
     saveFileDialog:  (opts: unknown)  => invoke('system:saveFileDialog', opts),
     copyToClipboard: (text: string)   => invoke('system:copyToClipboard', text),
   },
-  window: {
-    openQuickCapture: () => ipcRenderer.send('window:openQuickCapture'),
-    openImport:       () => ipcRenderer.send('window:openImport'),
-    closeWindow:      () => ipcRenderer.send('window:closeWindow'),
+  shortcuts: {
+    get: ()                  => invoke('shortcuts:get'),
+    set: (s: unknown)        => invoke('shortcuts:set', s),
   },
   startup: {
     get:    ()                  => invoke('system:getStartup'),
     set:    (enabled: boolean)  => invoke('system:setStartup', enabled),
+  },
+  window: {
+    openQuickCapture: () => ipcRenderer.send('window:openQuickCapture'),
+    openImport:       () => ipcRenderer.send('window:openImport'),
+    openMini:         () => ipcRenderer.send('window:openMini'),
+    openMain:         () => ipcRenderer.send('window:openMain'),
+    closeWindow:      () => ipcRenderer.send('window:closeWindow'),
   },
   on: (event: string, callback: (...args: unknown[]) => void) => {
     const handler = (_: Electron.IpcRendererEvent, ...args: unknown[]) => callback(...args);

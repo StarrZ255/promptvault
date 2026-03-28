@@ -4,6 +4,7 @@ import PromptList from './components/PromptList';
 import Editor from './components/Editor';
 import QuickCaptureWindow from './components/QuickCaptureWindow';
 import ImportWindow from './components/ImportWindow';
+import MiniWindow from './components/MiniWindow';
 import CommandPalette from './components/CommandPalette';
 import { ToastProvider } from './components/Toast';
 import type { Prompt, SearchFilter, Theme } from './types';
@@ -111,6 +112,15 @@ function MainLayout() {
 export default function App() {
   const page = window.location.hash.slice(1) || 'main';
 
+  if (page === 'mini') {
+    return (
+      <ErrorBoundary>
+        <ToastProvider>
+          <MiniWindow />
+        </ToastProvider>
+      </ErrorBoundary>
+    );
+  }
   if (page === 'quick-capture') {
     return (
       <ErrorBoundary>

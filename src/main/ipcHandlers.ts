@@ -1,32 +1,40 @@
 import { ipcMain, clipboard, dialog, BrowserWindow, app } from 'electron';
 import * as db from './database';
 import fs from 'fs';
+import type { ShortcutMap } from './shortcuts';
 
 export function registerHandlers(
   getQuickWin: () => BrowserWindow,
   getImportWin: () => BrowserWindow,
+  getMiniWin: () => BrowserWindow,
+  showMain: () => void,
+  getShortcuts: () => ShortcutMap,
+  updateShortcuts: (s: ShortcutMap) => void,
 ): void {
-  ipcMain.handle('prompts:getAll',           (_, filter) => db.getPrompts(filter));
-  ipcMain.handle('prompts:getById',          (_, id) => db.getPromptById(id));
-  ipcMain.handle('prompts:create',           (_, data) => db.createPrompt(data));
-  ipcMain.handle('prompts:update',           (_, id, data) => db.updatePrompt(id, data));
-  ipcMain.handle('prompts:delete',           (_, id) => db.deletePrompt(id));
-  ipcMain.handle('prompts:deleteBatch',      (_, ids) => db.deleteBatchPrompts(ids));
-  ipcMain.handle('prompts:duplicate',        (_, id) => db.duplicatePrompt(id));
-  ipcMain.handle('prompts:incrementUseCount',(_, id) => db.incrementUseCount(id));
+  // ─── Prompts ────────────────────────────────────────────────────────────────
+  ipcMain.handle('prompts:getAll',            (_, filter) => db.getPrompts(filter));
+  ipcMain.handle('prompts:getById',           (_, id) => db.getPromptById(id));
+  ipcMain.handle('prompts:create',            (_, data) => db.createPrompt(data));
+  ipcMain.handle('prompts:update',            (_, id, data) => db.updatePrompt(id, data));
+  ipcMain.handle('prompts:delete',            (_, id) => db.deletePrompt(id));
+  ipcMain.handle('prompts:deleteBatch',       (_, ids) => db.deleteBatchPrompts(ids));
+  ipcMain.handle('prompts:duplicate',         (_, id) => db.duplicatePrompt(id));
+  ipcMain.handle('prompts:incrementUseCount', (_, id) => db.incrementUseCount(id));
 
+  // ─── Thématiques ────────────────────────────────────────────────────────────
   ipcMain.handle('themes:getAll',   () => db.getThemes());
   ipcMain.handle('themes:create',   (_, data) => db.createTheme(data));
   ipcMain.handle('themes:delete',   (_, id) => db.deleteTheme(id));
   ipcMain.handle('themes:restore',  () => db.restoreBuiltinPrompts());
 
+  // ─── Recherche ──────────────────────────────────────────────────────────────
   ipcMain.handle('search:query', (_, params) => db.getPrompts(params));
 
+  // ─── Import / Export ────────────────────────────────────────────────────────
   ipcMain.handle('import:fromJson', async (_, filePath: string) => db.importFromJson(filePath));
   ipcMain.handle('import:fromPaste', async (_, content: string) => ({
     title: '', body: content, suggestedTheme: 'autre', suggestedTags: [],
   }));
-
   ipcMain.handle('export:toJson', async (_, ids?: string[]) => {
     const json = db.exportToJson(ids);
     const result = await dialog.showSaveDialog({
@@ -38,6 +46,7 @@ export function registerHandlers(
     return result.filePath;
   });
 
+  // ─── Système ────────────────────────────────────────────────────────────────
   ipcMain.handle('system:openFileDialog', async (_, opts) => {
     const result = await dialog.showOpenDialog({ properties: ['openFile'], ...opts });
     return result.canceled ? null : result.filePaths[0];
@@ -50,30 +59,37 @@ export function registerHandlers(
     clipboard.writeText(text);
   });
 
-  ipcMain.on('window:openQuickCapture', () => {
-    const win = getQuickWin();
-    win.show();
-    win.focus();
-  });
-  ipcMain.on('window:openImport', () => {
-    const win = getImportWin();
-    win.show();
-    win.focus();
-  });
-  ipcMain.on('window:closeWindow', (event) => {
-    BrowserWindow.fromWebContents(event.sender)?.hide();
-  });
-
-  // Démarrage automatique avec Windows
-  ipcMain.handle('system:getStartup', () => {
-    return app.getLoginItemSettings().openAtLogin;
-  });
+  // ─── Démarrage automatique ──────────────────────────────────────────────────
+  ipcMain.handle('system:getStartup', () => app.getLoginItemSettings().openAtLogin);
   ipcMain.handle('system:setStartup', (_, enabled: boolean) => {
     app.setLoginItemSettings({
-      openAtLogin: enabled,
-      path: app.getPath('exe'),
+      openAtLogin: enabled, path: app.getPath('exe'),
       args: enabled ? ['--hidden'] : [],
     });
     return enabled;
+  });
+
+  // ─── Raccourcis ─────────────────────────────────────────────────────────────
+  ipcMain.handle('shortcuts:get', () => getShortcuts());
+  ipcMain.handle('shortcuts:set', (_, shortcuts: ShortcutMap) => {
+    updateShortcuts(shortcuts);
+    return shortcuts;
+  });
+
+  // ─── Fenêtres ───────────────────────────────────────────────────────────────
+  ipcMain.on('window:openQuickCapture', () => {
+    const win = getQuickWin(); win.show(); win.focus();
+  });
+  ipcMain.on('window:openImport', () => {
+    const win = getImportWin(); win.show(); win.focus();
+  });
+  ipcMain.on('window:openMini', () => {
+    const win = getMiniWin(); win.show(); win.focus();
+  });
+  ipcMain.on('window:openMain', () => {
+    showMain();
+  });
+  ipcMain.on('window:closeWindow', (event) => {
+    BrowserWindow.fromWebContents(event.sender)?.hide();
   });
 }

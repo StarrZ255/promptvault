@@ -83,9 +83,19 @@ export interface VaultAPI {
     saveFileDialog: (opts: { defaultPath?: string }) => Promise<string | null>;
     copyToClipboard: (text: string) => Promise<void>;
   };
+  shortcuts: {
+    get: () => Promise<{ toggleMini: string; quickCapture: string; focusSearch: string; openMain: string }>;
+    set: (s: { toggleMini: string; quickCapture: string; focusSearch: string; openMain: string }) => Promise<void>;
+  };
+  startup: {
+    get: () => Promise<boolean>;
+    set: (enabled: boolean) => Promise<boolean>;
+  };
   window: {
     openQuickCapture: () => void;
     openImport: () => void;
+    openMini: () => void;
+    openMain: () => void;
     closeWindow: () => void;
   };
   on: (event: string, callback: (...args: unknown[]) => void) => () => void;
