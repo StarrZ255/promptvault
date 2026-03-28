@@ -1,0 +1,34 @@
+appId: xyz.kstarz.promptvault
+productName: PromptVault
+copyright: Copyright © 2026 Ahui Kassi
+
+directories:
+  output: dist
+  buildResources: build
+
+files:
+  - out/**/*
+  - package.json
+
+extraResources:
+  - from: data/seeds/
+    to: seeds
+  - from: resources/keywords.json
+    to: keywords.json
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: PromptVault
+
+portable:
+  artifactName: PromptVault-${version}-portable.exe
