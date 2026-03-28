@@ -7,7 +7,7 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "dist": "npm run build && electron-builder",
-    "dist:win": "npm run build && electron-builder --win",
+    "dist:win": "npm run build && electron-builder --win --x64",
     "postinstall": "cd node_modules/better-sqlite3 && npx prebuild-install --runtime electron --target 33.4.11 --arch x64 --platform win32 || true"
   },
   "dependencies": {
@@ -32,5 +32,55 @@
     "tailwindcss": "^3.4.0",
     "typescript": "^5.4.0",
     "vite": "^5.0.0"
+  },
+  "build": {
+    "appId": "com.promptvault.app",
+    "productName": "PromptVault",
+    "copyright": "Copyright © 2026",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "out/**/*",
+      "!**/*.map"
+    ],
+    "extraResources": [
+      {
+        "from": "data/seeds",
+        "to": "seeds",
+        "filter": ["**/*.json"]
+      }
+    ],
+    "asar": true,
+    "asarUnpack": [
+      "**/node_modules/better-sqlite3/**",
+      "**/node_modules/bindings/**",
+      "**/node_modules/node-gyp-build/**"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "resources/icon.ico",
+      "artifactName": "PromptVault-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false,
+      "installerLanguages": ["fr_FR", "en_US"],
+      "language": "1036"
+    },
+    "portable": {
+      "artifactName": "PromptVault-${version}-portable.exe"
+    }
   }
 }

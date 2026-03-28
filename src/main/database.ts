@@ -1,4 +1,7 @@
-import Database from 'better-sqlite3';
+// createRequire charge better-sqlite3 via Node.js natif — complètement invisible
+// à Rollup/Vite, aucun bundler ne peut l'intercepter ou le transformer.
+import { createRequire } from 'module';
+const Database = createRequire(__filename)('better-sqlite3') as typeof import('better-sqlite3').default;
 import { app } from 'electron';
 import path from 'path';
 import fs from 'fs';
