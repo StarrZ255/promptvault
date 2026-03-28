@@ -1,4 +1,4 @@
-import { app, BrowserWindow, globalShortcut, shell } from 'electron';
+import { app, BrowserWindow, globalShortcut, shell, dialog } from 'electron';
 import path from 'path';
 import { initDatabase } from './database';
 import { registerHandlers } from './ipcHandlers';
@@ -23,7 +23,6 @@ function createMainWindow(): BrowserWindow {
     minWidth: 900,
     minHeight: 600,
     frame: false,
-    titleBarStyle: 'hidden',
     backgroundColor: '#0A0A0F',
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
@@ -112,16 +111,13 @@ function registerShortcuts(): void {
 }
 
 app.whenReady().then(() => {
-  // Démarrage automatique avec Windows (peut être toggleé via IPC)
-  if (app.isPackaged) {
-    app.setLoginItemSettings({
-      openAtLogin: true,
-      path: app.getPath('exe'),
-      args: ['--hidden'],
-    });
+  try {
+    initDatabase();
+  } catch (err) {
+    dialog.showErrorBox('Erreur base de données', String(err));
+    app.quit();
+    return;
   }
-
-  initDatabase();
   registerHandlers(getOrCreateQuickCapture, getOrCreateImportWindow);
 
   // Ne pas afficher la fenêtre si lancé au démarrage avec --hidden

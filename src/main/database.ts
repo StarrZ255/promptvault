@@ -86,9 +86,9 @@ function getSeedsDir(): string {
   if (process.env.PORTABLE_EXECUTABLE_DIR) {
     return path.join(process.env.PORTABLE_EXECUTABLE_DIR, 'seeds');
   }
-  // En dev : les seeds sont dans data/seeds/ depuis la racine du projet
-  // En prod packagée : dans process.resourcesPath/seeds/
-  if (process.resourcesPath) {
+  // En prod packagée : process.resourcesPath pointe vers les ressources embarquées
+  // En dev : app.isPackaged est false, on lit depuis data/seeds/ à la racine du projet
+  if (app.isPackaged) {
     return path.join(process.resourcesPath, 'seeds');
   }
   return path.join(app.getAppPath(), 'data', 'seeds');
