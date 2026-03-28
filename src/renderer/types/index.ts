@@ -16,6 +16,8 @@ export interface Prompt {
   sha256: string;
   created_at: string;
   updated_at: string;
+  deleted?: 0 | 1;
+  deleted_at?: string;
 }
 
 export interface Theme {
@@ -35,6 +37,7 @@ export interface SearchFilter {
   lang?: string;
   minRating?: number;
   sortBy?: 'relevance' | 'updated_at' | 'use_count' | 'rating';
+  trash?: boolean;
 }
 
 export interface ImportReport {
@@ -61,6 +64,10 @@ export interface VaultAPI {
     deleteBatch: (ids: string[]) => Promise<{ deleted: number }>;
     duplicate: (id: string) => Promise<Prompt>;
     incrementUseCount: (id: string) => Promise<void>;
+    getDeleted: () => Promise<Prompt[]>;
+    restore: (id: string) => Promise<void>;
+    permanentDelete: (id: string) => Promise<void>;
+    emptyTrash: () => Promise<{ deleted: number }>;
   };
   themes: {
     getAll: () => Promise<Theme[]>;

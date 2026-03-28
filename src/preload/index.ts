@@ -14,6 +14,10 @@ contextBridge.exposeInMainWorld('vault', {
     deleteBatch:       (ids: string[])                => invoke('prompts:deleteBatch', ids),
     duplicate:         (id: string)                   => invoke('prompts:duplicate', id),
     incrementUseCount: (id: string)                   => invoke('prompts:incrementUseCount', id),
+    getDeleted:        ()           => invoke('prompts:getDeleted'),
+    restore:           (id: string) => invoke('prompts:restore', id),
+    permanentDelete:   (id: string) => invoke('prompts:permanentDelete', id),
+    emptyTrash:        ()           => invoke('prompts:emptyTrash'),
   },
   themes: {
     getAll:  ()                        => invoke('themes:getAll'),

@@ -14,11 +14,11 @@ export default function Sidebar() {
   const [newColor, setNewColor] = useState('#6C63FF');
 
   const handleThemeClick = (themeId: string | undefined) => {
-    setFilter(f => ({ ...f, theme: themeId, favorites: undefined }));
+    setFilter(f => ({ ...f, theme: themeId, favorites: undefined, trash: undefined }));
   };
 
   const handleFavorites = () => {
-    setFilter(f => ({ ...f, favorites: !f.favorites, theme: undefined }));
+    setFilter(f => ({ ...f, favorites: !f.favorites, theme: undefined, trash: undefined }));
   };
 
   const handleQuickAddTheme = async () => {
@@ -40,9 +40,9 @@ export default function Sidebar() {
 
         <nav className="flex-1 px-2 space-y-0.5">
           <button
-            onClick={() => setFilter({ sortBy: filter.sortBy })}
+            onClick={() => setFilter({ sortBy: filter.sortBy || 'updated_at' })}
             className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-2 transition-colors
-              ${!filter.theme && !filter.favorites
+              ${!filter.theme && !filter.favorites && !(filter as any).trash
                 ? 'bg-primary/20 text-primary font-medium'
                 : 'text-muted hover:text-text hover:bg-white/5'}`}
           >
@@ -59,6 +59,17 @@ export default function Sidebar() {
           >
             <span>⭐</span>
             <span>Favoris</span>
+          </button>
+
+          <button
+            onClick={() => setFilter(f => ({ ...f, trash: true, theme: undefined, favorites: undefined }))}
+            className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-2 transition-colors
+              ${(filter as any).trash
+                ? 'bg-red-500/20 text-red-400 font-medium'
+                : 'text-muted hover:text-text hover:bg-white/5'}`}
+          >
+            <span>🗑</span>
+            <span>Corbeille</span>
           </button>
 
           <div className="pt-3 pb-1 px-3 flex items-center justify-between">

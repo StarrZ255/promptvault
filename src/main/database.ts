@@ -72,6 +72,10 @@ export function initDatabase(): void {
     );
   `);
 
+  // Schema migration — add columns if missing (safe to run on every startup)
+  try { db.exec(`ALTER TABLE prompts ADD COLUMN deleted INTEGER DEFAULT 0`); } catch {}
+  try { db.exec(`ALTER TABLE prompts ADD COLUMN deleted_at TEXT`); } catch {}
+
   const insertTheme = db.prepare(
     `INSERT OR IGNORE INTO themes (id, label, icon, color, is_custom) VALUES (?, ?, ?, ?, 0)`
   );
@@ -132,7 +136,7 @@ export function getPrompts(filter: {
   query?: string; theme?: string; favorites?: boolean;
   type?: string; lang?: string; minRating?: number; sortBy?: string;
 }): unknown[] {
-  let sql = `SELECT * FROM prompts WHERE 1=1`;
+  let sql = `SELECT * FROM prompts WHERE deleted = 0`;
   const params: unknown[] = [];
 
   if (filter.theme)     { sql += ` AND theme = ?`;    params.push(filter.theme); }
@@ -207,13 +211,15 @@ export function updatePrompt(id: string, data: Partial<MappedPrompt>): unknown {
 }
 
 export function deletePrompt(id: string): void {
-  db.prepare(`DELETE FROM prompts WHERE id = ? AND locked = 0`).run(id);
+  const now = new Date().toISOString();
+  db.prepare(`UPDATE prompts SET deleted = 1, deleted_at = ? WHERE id = ? AND locked = 0`).run(now, id);
 }
 
 export function deleteBatchPrompts(ids: string[]): { deleted: number } {
   if (!ids.length) return { deleted: 0 };
+  const now = new Date().toISOString();
   const placeholders = ids.map(() => '?').join(',');
-  const result = db.prepare(`DELETE FROM prompts WHERE id IN (${placeholders}) AND locked = 0`).run(...ids);
+  const result = db.prepare(`UPDATE prompts SET deleted = 1, deleted_at = ? WHERE id IN (${placeholders}) AND locked = 0`).run(now, ...ids);
   return { deleted: result.changes };
 }
 
@@ -291,6 +297,23 @@ export function exportToJson(ids?: string[]): string {
     rows = (db.prepare(`SELECT * FROM prompts`).all() as Record<string, unknown>[]).map(parseRow);
   }
   return JSON.stringify(rows, null, 2);
+}
+
+export function getDeletedPrompts(): unknown[] {
+  return (db.prepare(`SELECT * FROM prompts WHERE deleted = 1 ORDER BY deleted_at DESC`).all() as Record<string, unknown>[]).map(parseRow);
+}
+
+export function restorePrompt(id: string): void {
+  db.prepare(`UPDATE prompts SET deleted = 0, deleted_at = NULL WHERE id = ?`).run(id);
+}
+
+export function permanentDeletePrompt(id: string): void {
+  db.prepare(`DELETE FROM prompts WHERE id = ?`).run(id);
+}
+
+export function emptyTrash(): { deleted: number } {
+  const result = db.prepare(`DELETE FROM prompts WHERE deleted = 1`).run();
+  return { deleted: result.changes };
 }
 
 export function restoreBuiltinPrompts(): { restored: number } {

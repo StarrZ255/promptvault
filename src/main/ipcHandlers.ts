@@ -20,6 +20,10 @@ export function registerHandlers(
   ipcMain.handle('prompts:deleteBatch',       (_, ids) => db.deleteBatchPrompts(ids));
   ipcMain.handle('prompts:duplicate',         (_, id) => db.duplicatePrompt(id));
   ipcMain.handle('prompts:incrementUseCount', (_, id) => db.incrementUseCount(id));
+  ipcMain.handle('prompts:getDeleted',       () => db.getDeletedPrompts());
+  ipcMain.handle('prompts:restore',          (_, id) => db.restorePrompt(id));
+  ipcMain.handle('prompts:permanentDelete',  (_, id) => db.permanentDeletePrompt(id));
+  ipcMain.handle('prompts:emptyTrash',       () => db.emptyTrash());
 
   // ─── Thématiques ────────────────────────────────────────────────────────────
   ipcMain.handle('themes:getAll',   () => db.getThemes());

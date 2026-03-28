@@ -351,10 +351,6 @@ export default function SettingsModal({ open, onClose }: Props) {
               )}
             </div>
 
-            {/* Footer */}
-            <div className="px-5 py-3 border-t border-border text-center flex-shrink-0">
-              <p className="text-xs text-muted">PromptVault v1.0.0 — 100% local, zéro réseau</p>
-            </div>
           </motion.div>
         </div>
       )}

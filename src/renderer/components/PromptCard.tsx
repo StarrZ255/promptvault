@@ -49,12 +49,17 @@ export default function PromptCard({ prompt, theme, isSelected, isActive, onSele
         </motion.div>
       )}
 
-      {theme && (
-        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full mb-2"
-          style={{ backgroundColor: `${theme.color}20`, color: theme.color }}>
-          {theme.icon} {theme.label}
-        </span>
-      )}
+      <div className="flex items-center justify-between mb-2">
+        {theme && (
+          <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full"
+            style={{ backgroundColor: `${theme.color}20`, color: theme.color }}>
+            {theme.icon} {theme.label}
+          </span>
+        )}
+        {prompt.is_builtin === 1 && (
+          <span className="text-xs text-muted/50 ml-auto">⚙️</span>
+        )}
+      </div>
 
       <h3 className="font-display font-semibold text-sm text-text mb-1 line-clamp-1">{prompt.title}</h3>
       <p className="text-xs text-muted line-clamp-2 leading-relaxed">{prompt.body}</p>

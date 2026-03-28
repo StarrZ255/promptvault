@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useApp } from '../App';
-import { useAutoSave } from '../hooks/useAutoSave';
 import { useToast } from './Toast';
 import type { Prompt } from '../types';
 
@@ -16,25 +15,19 @@ export default function Editor() {
     setLocal(selectedPrompt ? { ...selectedPrompt } : null);
   }, [selectedPrompt]);
 
-  const save = useCallback(async (id: string, data: Partial<Prompt>) => {
-    if (isNew) {
-      const created = await window.vault.prompts.create({ ...local, ...data }) as Prompt;
-      setSelectedPrompt(created);
-      toast('Prompt créé ✓');
-    } else {
-      await window.vault.prompts.update(id, data);
-      toast('Sauvegardé ✓');
-    }
-    refreshThemes();
-    bumpPromptsVersion();
-  }, [isNew, local, setSelectedPrompt, toast, refreshThemes, bumpPromptsVersion]);
-
-  const { scheduleAutoSave } = useAutoSave(local, save);
-
   const update = (field: keyof Prompt, value: unknown) => {
     if (!local) return;
     setLocal({ ...local, [field]: value } as Prompt);
-    scheduleAutoSave({ [field]: value } as Partial<Prompt>);
+  };
+
+  const handleToggleFavorite = async () => {
+    if (!local) return;
+    const newVal: 0 | 1 = local.is_favorite === 1 ? 0 : 1;
+    setLocal({ ...local, is_favorite: newVal });
+    if (!isNew) {
+      await window.vault.prompts.update(local.id, { is_favorite: newVal });
+      bumpPromptsVersion();
+    }
   };
 
   const handleSave = async () => {
@@ -90,10 +83,10 @@ export default function Editor() {
       <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
         <span className="text-sm font-medium font-display">{isNew ? 'Nouveau prompt' : 'Édition'}</span>
         <div className="flex items-center gap-1">
-          <button onClick={() => update('is_favorite', local.is_favorite === 1 ? 0 : 1)}
+          <button onClick={handleToggleFavorite}
             className={`p-1.5 rounded hover:bg-white/5 text-lg ${local.is_favorite === 1 ? 'text-yellow-400' : 'text-muted'}`}>⭐</button>
           {!isNew && <button onClick={handleDuplicate} className="p-1.5 rounded hover:bg-white/5 text-muted text-lg" title="Dupliquer">⎘</button>}
-          {!isNew && local.locked === 0 && <button onClick={handleDelete} className="p-1.5 rounded hover:bg-white/5 text-red-400 text-lg">🗑</button>}
+          {!isNew && local.locked === 0 && local.is_builtin === 0 && <button onClick={handleDelete} className="p-1.5 rounded hover:bg-white/5 text-red-400 text-lg">🗑</button>}
           <button onClick={() => setSelectedPrompt(null)} className="p-1.5 rounded hover:bg-white/5 text-muted">✕</button>
         </div>
       </div>
@@ -154,7 +147,12 @@ export default function Editor() {
           <div className="text-xs text-muted space-y-1 border-t border-border pt-3">
             <div>Utilisé {local.use_count} fois</div>
             <div>Modifié le {new Date(local.updated_at).toLocaleDateString('fr-FR')}</div>
-            {local.is_builtin === 1 && <div className="text-primary font-medium">✓ Prompt officiel</div>}
+            {local.is_builtin === 1 && (
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-primary/10 border border-primary/20 text-xs text-primary">
+                <span>⚙️</span>
+                <span>Prompt officiel — modifiable mais ne peut pas être supprimé</span>
+              </div>
+            )}
             {local.locked === 1 && <div className="text-yellow-400">🔒 Verrouillé</div>}
           </div>
         )}
