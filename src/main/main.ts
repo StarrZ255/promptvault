@@ -1,4 +1,5 @@
-import { app, BrowserWindow, globalShortcut, shell, dialog, Tray, Menu, nativeImage } from 'electron';
+import { app, BrowserWindow, globalShortcut, shell, dialog, Tray, Menu, nativeImage, protocol, ipcMain } from 'electron';
+import fs from 'fs';
 import path from 'path';
 import { initDatabase } from './database';
 import { registerHandlers } from './ipcHandlers';
@@ -21,10 +22,15 @@ function createTrayIcon(): void {
 
   const buildMenu = () => Menu.buildFromTemplate([
     { label: '📋 Ouvrir PromptVault',  click: () => showMainWindow() },
+    { label: '⚙️ Paramètres', click: () => {
+        showMainWindow();
+        setTimeout(() => mainWindow?.webContents.send('shortcut:open-settings'), 200);
+    }},
+    { type: 'separator' },
     { label: '⚡ Mini-fenêtre (Alt+P)', click: () => { const w = getOrCreateMiniWindow(); w.show(); w.focus(); } },
     { label: '✏️ Capture rapide (Alt+N)', click: () => { const w = getOrCreateQuickCapture(); w.show(); w.focus(); } },
     { type: 'separator' },
-    { label: '❌ Quitter', click: () => { tray?.destroy(); app.quit(); } },
+    { label: '❌ Quitter', click: () => { app.isQuitting = true; tray?.destroy(); app.quit(); } },
   ]);
 
   tray.setContextMenu(buildMenu());
@@ -47,16 +53,29 @@ function createMainWindow(): BrowserWindow {
       contextIsolation: true, nodeIntegration: false, sandbox: false,
     },
   });
+
   win.loadURL(getRendererUrl('main'));
+
+  // Empêcher la fermeture — cacher vers le Tray
+  win.on('close', (e) => {
+    if (!app.isQuitting) {
+      e.preventDefault();
+      win.hide();
+    }
+    return false;
+  });
+
   return win;
 }
 
 export function getOrCreateMiniWindow(): BrowserWindow {
   if (!miniWindow || miniWindow.isDestroyed()) {
     miniWindow = new BrowserWindow({
-      width: 420, height: 520,
+      width: 950, height: 520,
       resizable: false, alwaysOnTop: true, frame: false,
-      skipTaskbar: true, backgroundColor: '#12121A',
+      skipTaskbar: true, transparent: false,
+      backgroundColor: '#1a1a20',
+      hasShadow: true,
       webPreferences: {
         preload: path.join(__dirname, '../preload/index.js'),
         contextIsolation: true, nodeIntegration: false, sandbox: false,
@@ -100,12 +119,15 @@ export function getOrCreateImportWindow(): BrowserWindow {
   return importWindow;
 }
 
-export function showMainWindow(): void {
+export function showMainWindow(page?: string): void {
   if (!mainWindow || mainWindow.isDestroyed()) {
     mainWindow = createMainWindow();
   } else {
     if (!mainWindow.isVisible()) mainWindow.show();
     mainWindow.focus();
+  }
+  if (page === 'settings') {
+    setTimeout(() => mainWindow?.webContents.send('shortcut:open-settings'), 300);
   }
 }
 
@@ -113,36 +135,47 @@ export function registerShortcuts(shortcuts: ShortcutMap = currentShortcuts): vo
   globalShortcut.unregisterAll();
   currentShortcuts = shortcuts;
 
-  // Alt+P (configurable) — mini fenêtre flottante
-  try {
-    globalShortcut.register(shortcuts.toggleMini, () => {
-      const win = getOrCreateMiniWindow();
-      if (win.isVisible()) { win.hide(); } else { win.show(); win.focus(); }
-    });
-  } catch { /* raccourci invalide */ }
+  const tryRegister = (accelerator: string | undefined, callback: () => void) => {
+    if (!accelerator || accelerator.trim() === '') return;
+    try {
+      globalShortcut.register(accelerator, callback);
+    } catch { /* ignore invalid shortcut */ }
+  };
 
-  // Alt+N (configurable) — capture rapide
-  try {
-    globalShortcut.register(shortcuts.quickCapture, () => {
-      const win = getOrCreateQuickCapture();
-      win.show(); win.focus();
-    });
-  } catch { /* ignore */ }
+  tryRegister(shortcuts.toggleMini, () => {
+    const win = getOrCreateMiniWindow();
+    if (win.isDestroyed()) return;
+    if (win.isVisible() && win.isFocused()) {
+      win.hide();
+    } else {
+      win.setSkipTaskbar(true);
+      win.center();
+      win.show();
+      win.focus();
+      win.setAlwaysOnTop(true, 'screen-saver');
+    }
+  });
 
-  // Alt+F (configurable) — focus recherche dans l'app principale
-  try {
-    globalShortcut.register(shortcuts.focusSearch, () => {
-      showMainWindow();
-      mainWindow?.webContents.send('shortcut:focus-search');
-    });
-  } catch { /* ignore */ }
+  tryRegister(shortcuts.quickCapture, () => {
+    const win = getOrCreateQuickCapture();
+    if (win.isDestroyed()) return;
+    if (win.isVisible() && win.isFocused()) {
+      win.hide();
+    } else {
+      win.show();
+      win.focus();
+      win.setAlwaysOnTop(true, 'screen-saver');
+    }
+  });
 
-  // Alt+O (configurable) — ouvrir/afficher l'app principale
-  try {
-    globalShortcut.register(shortcuts.openMain, () => {
-      showMainWindow();
-    });
-  } catch { /* ignore */ }
+  tryRegister(shortcuts.focusSearch, () => {
+    showMainWindow();
+    mainWindow?.webContents.send('shortcut:focus-search');
+  });
+
+  tryRegister(shortcuts.openMain, () => {
+    showMainWindow();
+  });
 }
 
 export function updateShortcuts(shortcuts: ShortcutMap): void {
@@ -152,7 +185,25 @@ export function updateShortcuts(shortcuts: ShortcutMap): void {
 
 export { currentShortcuts };
 
+// Enregistrement du protocole vault-img pour les icônes locales
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'vault-img', privileges: { standard: true, secure: true, supportFetchAPI: true, bypassCSP: true } }
+]);
+
 app.whenReady().then(() => {
+  // Gérer le protocole vault-img
+  protocol.handle('vault-img', (request) => {
+    const url = request.url.replace('vault-img://', '');
+    const decodedUrl = decodeURIComponent(url);
+    const filePath = path.normalize(decodedUrl);
+    // On vérifie que le fichier est bien dans userData/theme-icons pour la sécurité
+    const iconsDir = path.join(app.getPath('userData'), 'theme-icons');
+    if (!filePath.startsWith(iconsDir)) {
+      return new Response('Forbidden', { status: 403 });
+    }
+    return fetch(`file://${filePath}`);
+  });
+
   try {
     initDatabase();
   } catch (err) {
@@ -169,6 +220,25 @@ app.whenReady().then(() => {
     () => currentShortcuts,
     updateShortcuts,
   );
+
+  // Handlers pour les contrôles de fenêtre personnalisés
+  ipcMain.on('window:minimize', (e) => {
+    BrowserWindow.fromWebContents(e.sender)?.minimize();
+  });
+  ipcMain.on('window:maximize', (e) => {
+    const win = BrowserWindow.fromWebContents(e.sender);
+    if (win?.isMaximized()) win.unmaximize(); else win?.maximize();
+  });
+  ipcMain.on('window:close', (e) => {
+    const win = BrowserWindow.fromWebContents(e.sender);
+    const miniWin = getOrCreateMiniWindow();
+    if (win === mainWindow || win === miniWin) win?.hide(); else win?.close();
+  });
+
+  ipcMain.on('window:edit-prompt', (_, prompt: unknown) => {
+    showMainWindow();
+    mainWindow?.webContents.send('shortcut:edit-prompt', prompt);
+  });
 
   createTrayIcon();
 
@@ -188,8 +258,15 @@ app.on('window-all-closed', () => {
 });
 
 app.on('will-quit', () => {
+  app.isQuitting = true;
   globalShortcut.unregisterAll();
 });
+
+declare global {
+  namespace Electron {
+    interface App { isQuitting?: boolean; }
+  }
+}
 
 app.on('web-contents-created', (_, contents) => {
   contents.setWindowOpenHandler(({ url }) => {

@@ -1,26 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import type { Theme } from '../types';
 
-/** Affiche l’emoji ou une image locale si `icon_image` est défini. */
+/** Affiche l’emoji ou une image locale via le protocole vault-img:// */
 export default function ThemeGlyph({ theme, className = '' }: { theme: Theme; className?: string }) {
-  const [imgUrl, setImgUrl] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!theme.icon_image) {
-      setImgUrl(null);
-      return;
-    }
-    let cancelled = false;
-    window.vault.system.pathToFileUrl(theme.icon_image).then((u) => {
-      if (!cancelled) setImgUrl(u);
-    }).catch(() => { if (!cancelled) setImgUrl(null); });
-    return () => { cancelled = true; };
-  }, [theme.icon_image]);
-
-  if (imgUrl) {
+  if (theme.icon_image) {
+    // On utilise notre protocole personnalisé pour charger l'image locale en toute sécurité
+    const src = `vault-img://${theme.icon_image}`;
     return (
-      <img src={imgUrl} alt="" className={`h-5 w-5 shrink-0 rounded object-cover ${className}`} />
+      <div className={`flex items-center justify-center shrink-0 ${className}`}>
+        <img 
+          src={src} 
+          alt="" 
+          className="h-full w-full object-cover rounded-lg shadow-sm border border-border/10" 
+          onError={(e) => {
+            // Fallback sur l'emoji si l'image ne charge pas
+            (e.target as HTMLImageElement).style.display = 'none';
+          }}
+        />
+      </div>
     );
   }
-  return <span className={className}>{theme.icon}</span>;
+
+  // Pour les emojis, on force un flexboxt pour un centrage vertical parfait (neutralise la baseline)
+  return (
+    <div className={`flex items-center justify-center select-none shrink-0 leading-none ${className}`}>
+      {theme.icon || '📁'}
+    </div>
+  );
 }

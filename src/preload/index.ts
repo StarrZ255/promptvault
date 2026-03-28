@@ -58,7 +58,10 @@ contextBridge.exposeInMainWorld('vault', {
     openImport:       () => ipcRenderer.send('window:openImport'),
     openMini:         () => ipcRenderer.send('window:openMini'),
     openMain:         () => ipcRenderer.send('window:openMain'),
-    closeWindow:      () => ipcRenderer.send('window:closeWindow'),
+    editPrompt:       (p: unknown) => ipcRenderer.send('window:edit-prompt', p),
+    close:            () => ipcRenderer.send('window:close'),
+    minimize:         () => ipcRenderer.send('window:minimize'),
+    maximize:         () => ipcRenderer.send('window:maximize'),
   },
   on: (event: string, callback: (...args: unknown[]) => void) => {
     const handler = (_: Electron.IpcRendererEvent, ...args: unknown[]) => callback(...args);

@@ -5,6 +5,8 @@ import Editor from './components/Editor';
 import QuickCaptureWindow from './components/QuickCaptureWindow';
 import ImportWindow from './components/ImportWindow';
 import MiniWindow from './components/MiniWindow';
+import TitleBar from './components/TitleBar';
+import SettingsModal from './components/SettingsModal';
 import CommandPalette from './components/CommandPalette';
 import { ToastProvider } from './components/Toast';
 import type { Prompt, SearchFilter, Theme } from './types';
@@ -42,7 +44,7 @@ interface AppState {
   selectedPrompt: Prompt | null;
   setSelectedPrompt: (p: Prompt | null) => void;
   filter: SearchFilter;
-  setFilter: (f: SearchFilter) => void;
+  setFilter: React.Dispatch<React.SetStateAction<SearchFilter>>;
   themes: Theme[];
   refreshThemes: () => void;
   promptsVersion: number;
@@ -56,7 +58,68 @@ interface AppState {
 export const AppContext = createContext<AppState>({} as AppState);
 export const useApp = () => useContext(AppContext);
 
-function MainLayout() {
+function AppRouter() {
+  const { isDark, showCommandPalette, setSelectedPrompt, selectedPrompt } = useApp();
+  const [showSettings, setShowSettings] = useState(false);
+
+  // Listen for settings shortcut globally
+  useEffect(() => {
+    const offSettings = window.vault.on('shortcut:open-settings', () => setShowSettings(true));
+    const offEdit = window.vault.on('shortcut:edit-prompt', (p: any) => {
+      setSelectedPrompt(p);
+      setShowSettings(false); // Close settings if open
+    });
+    return () => { offSettings(); offEdit(); };
+  }, [setSelectedPrompt]);
+
+  const page = window.location.hash.slice(1) || 'main';
+
+  if (page === 'mini') {
+    return (
+      <div className="flex flex-col h-screen overflow-hidden bg-transparent">
+        <MiniWindow />
+      </div>
+    );
+  }
+
+  if (page === 'quick-capture') {
+    return (
+      <div className="flex flex-col h-screen overflow-hidden">
+        <TitleBar title="Capture Rapide" />
+        <QuickCaptureWindow />
+      </div>
+    );
+  }
+
+  if (page === 'import') {
+    return (
+      <div className="flex flex-col h-screen overflow-hidden">
+        <TitleBar title="Import" />
+        <ImportWindow />
+      </div>
+    );
+  }
+
+  // Main Page
+  return (
+    <>
+      <div className="flex h-screen w-screen overflow-hidden bg-bg text-text font-body select-none [&_input]:select-text [&_textarea]:select-text [&_select]:select-text flex-col">
+        <TitleBar />
+        <div className="flex flex-1 overflow-hidden relative">
+          <Sidebar onOpenSettings={() => setShowSettings(true)} />
+          <main className="flex flex-1 overflow-hidden">
+            <PromptList />
+            {selectedPrompt && <Editor />}
+          </main>
+        </div>
+      </div>
+      {showCommandPalette && <CommandPalette />}
+      <SettingsModal open={showSettings} onClose={() => setShowSettings(false)} />
+    </>
+  );
+}
+
+export default function App() {
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
   const [filter, setFilter] = useState<SearchFilter>({ sortBy: 'updated_at' });
   const [themes, setThemes] = useState<Theme[]>([]);
@@ -65,10 +128,12 @@ function MainLayout() {
   const [promptsVersion, setPromptsVersion] = useState(0);
 
   const bumpPromptsVersion = useCallback(() => setPromptsVersion(v => v + 1), []);
+  const toggleTheme = useCallback(() => setIsDark(d => !d), []);
+  const setShowCommandPaletteCallback = useCallback((v: boolean) => setShowCommandPalette(v), []);
 
   const refreshThemes = useCallback(async () => {
     const t = await window.vault.themes.getAll();
-    setThemes(t as Theme[]);
+    setThemes((t || []) as Theme[]);
   }, []);
 
   useEffect(() => { refreshThemes(); }, [refreshThemes]);
@@ -89,66 +154,28 @@ function MainLayout() {
     document.documentElement.classList.toggle('dark', isDark);
   }, [isDark]);
 
-  return (
-    <AppContext.Provider value={{
-      selectedPrompt, setSelectedPrompt,
-      filter, setFilter,
-      themes, refreshThemes,
-      promptsVersion, bumpPromptsVersion,
-      isDark, toggleTheme: () => setIsDark(d => !d),
-      showCommandPalette, setShowCommandPalette,
-    }}>
-      <div className="flex h-screen w-screen overflow-hidden bg-bg text-text font-body select-none [&_input]:select-text [&_textarea]:select-text [&_select]:select-text">
-        {/* Drag region — only over sidebar title area, NOT over main content */}
-        <div
-          className="fixed top-0 left-0 w-56 h-10 z-0 pointer-events-none"
-          style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
-        />
-        <Sidebar />
-        <main className="flex flex-1 overflow-hidden">
-          <PromptList />
-          {selectedPrompt && <Editor />}
-        </main>
-      </div>
-      {showCommandPalette && <CommandPalette />}
-    </AppContext.Provider>
-  );
-}
+  const contextValue = React.useMemo(() => ({
+    selectedPrompt, setSelectedPrompt,
+    filter, setFilter,
+    themes, refreshThemes,
+    promptsVersion, bumpPromptsVersion,
+    isDark, toggleTheme,
+    showCommandPalette, setShowCommandPalette: setShowCommandPaletteCallback,
+  }), [
+    selectedPrompt, setSelectedPrompt,
+    filter, setFilter,
+    themes, refreshThemes,
+    promptsVersion, bumpPromptsVersion,
+    isDark, toggleTheme,
+    showCommandPalette, setShowCommandPaletteCallback,
+  ]);
 
-export default function App() {
-  const page = window.location.hash.slice(1) || 'main';
-
-  if (page === 'mini') {
-    return (
-      <ErrorBoundary>
-        <ToastProvider>
-          <MiniWindow />
-        </ToastProvider>
-      </ErrorBoundary>
-    );
-  }
-  if (page === 'quick-capture') {
-    return (
-      <ErrorBoundary>
-        <ToastProvider>
-          <QuickCaptureWindow />
-        </ToastProvider>
-      </ErrorBoundary>
-    );
-  }
-  if (page === 'import') {
-    return (
-      <ErrorBoundary>
-        <ToastProvider>
-          <ImportWindow />
-        </ToastProvider>
-      </ErrorBoundary>
-    );
-  }
   return (
     <ErrorBoundary>
       <ToastProvider>
-        <MainLayout />
+        <AppContext.Provider value={contextValue}>
+          <AppRouter />
+        </AppContext.Provider>
       </ToastProvider>
     </ErrorBoundary>
   );

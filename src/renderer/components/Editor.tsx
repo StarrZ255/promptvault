@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { useApp } from '../App';
 import { useToast } from './Toast';
 import type { Prompt } from '../types';
@@ -9,10 +8,14 @@ export default function Editor() {
   const { toast } = useToast();
   const [local, setLocal] = useState<Prompt | null>(null);
   const [saving, setSaving] = useState(false);
+  const [bodyText, setBodyText] = useState('');
+  const [tagsText, setTagsText] = useState('');
   const isNew = local?.id === 'new';
 
   useEffect(() => {
     setLocal(selectedPrompt ? { ...selectedPrompt } : null);
+    setBodyText(selectedPrompt?.body || '');
+    setTagsText(Array.isArray(selectedPrompt?.tags) ? selectedPrompt.tags.join(', ') : '');
   }, [selectedPrompt]);
 
   const update = (field: keyof Prompt, value: unknown) => {
@@ -35,14 +38,12 @@ export default function Editor() {
 
   const handleSave = async () => {
     if (!local) return;
-    // #region agent log
-    fetch('http://127.0.0.1:7445/ingest/34a31d9d-5b6e-4ce6-ae07-12e5e06f1d18', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '3e6107' }, body: JSON.stringify({ sessionId: '3e6107', location: 'Editor.tsx:handleSave', message: 'save clicked', data: { isNew: local?.id === 'new' }, timestamp: Date.now(), hypothesisId: 'H5' }) }).catch(() => {});
-    // #endregion
     setSaving(true);
     try {
+      const currentTags = tagsText.split(',').map(t => t.trim()).filter(Boolean);
       const data: Partial<Prompt> = {
-        title: local.title, body: local.body, theme: local.theme,
-        tags: local.tags, rating: local.rating, is_favorite: local.is_favorite,
+        title: local.title, body: bodyText, theme: local.theme,
+        tags: currentTags, rating: local.rating, is_favorite: local.is_favorite,
       };
       if (isNew) {
         const created = await window.vault.prompts.create({
@@ -99,11 +100,7 @@ export default function Editor() {
   if (!local) return null;
 
   return (
-    <motion.aside
-      initial={{ x: 24, opacity: 0 }} animate={{ x: 0, opacity: 1 }}
-      transition={{ type: 'tween', duration: 0.2, ease: 'easeOut' }}
-      className="w-96 flex-shrink-0 h-full flex flex-col border-l border-border bg-surface overflow-y-auto"
-    >
+    <aside className="w-96 flex-shrink-0 h-full flex flex-col border-l border-border bg-surface overflow-y-auto">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
         <span className="text-sm font-medium font-display">{isNew ? 'Nouveau prompt' : 'Édition'}</span>
@@ -129,13 +126,8 @@ export default function Editor() {
         {/* Contenu */}
         <div>
           <label className="text-xs text-muted uppercase tracking-wider mb-1 block">Contenu</label>
-          <textarea value={local.body} onChange={e => update('body', e.target.value)} rows={10}
+          <textarea value={bodyText} onChange={e => setBodyText(e.target.value)} rows={10} onBlur={() => update('body', bodyText)}
             placeholder="Écris ton prompt ici…"
-            onFocus={() => {
-              // #region agent log
-              fetch('http://127.0.0.1:7445/ingest/34a31d9d-5b6e-4ce6-ae07-12e5e06f1d18', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '3e6107' }, body: JSON.stringify({ sessionId: '3e6107', location: 'Editor.tsx:body-textarea', message: 'textarea focus', data: {}, timestamp: Date.now(), hypothesisId: 'H-text' }) }).catch(() => {});
-              // #endregion
-            }}
             className="w-full select-text bg-bg border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary resize-none font-mono leading-relaxed" />
         </div>
 
@@ -165,8 +157,9 @@ export default function Editor() {
             Mots-clés <span className="normal-case font-normal text-muted/60">— pour affiner la recherche</span>
           </label>
           <input type="text"
-            value={Array.isArray(local.tags) ? local.tags.join(', ') : ''}
-            onChange={e => update('tags', e.target.value.split(',').map(t => t.trim()).filter(Boolean))}
+            value={tagsText}
+            onChange={e => setTagsText(e.target.value)}
+            onBlur={() => update('tags', tagsText.split(',').map(t => t.trim()).filter(Boolean))}
             placeholder="ex: python, automatisation, débutant…"
             className="w-full select-text bg-bg border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary" />
           <p className="text-xs text-muted/60 mt-1">Sépare par des virgules. Ex : si thème = Code, ajoute « react, api, tests »</p>
@@ -207,6 +200,6 @@ export default function Editor() {
           {saving ? 'Sauvegarde…' : isNew ? '✓  Créer le prompt' : '✓  Sauvegarder'}
         </button>
       </div>
-    </motion.aside>
+    </aside>
   );
 }

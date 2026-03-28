@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
 import { useApp } from '../App';
 import { useSearch } from '../hooks/useSearch';
 import { useSelection } from '../hooks/useSelection';
@@ -136,18 +135,16 @@ export default function PromptList() {
           </div>
 
           <div className={`flex-1 overflow-y-auto p-4 ${isGrid ? 'grid grid-cols-2 xl:grid-cols-3 gap-3 content-start' : 'flex flex-col gap-2'}`}>
-            <AnimatePresence mode="sync">
-              {prompts.map(p => (
-                <PromptCard
-                  key={p.id} prompt={p}
-                  theme={themes.find(t => t.id === p.theme)}
-                  isSelected={selected.has(p.id)}
-                  isActive={selectedPrompt?.id === p.id}
-                  onSelect={toggle}
-                  onClick={setSelectedPrompt}
-                />
-              ))}
-            </AnimatePresence>
+            {prompts.map(p => (
+              <PromptCard
+                key={p.id} prompt={p}
+                theme={themes.find(t => t.id === p.theme)}
+                isSelected={selected.has(p.id)}
+                isActive={selectedPrompt?.id === p.id}
+                onSelect={toggle}
+                onClick={setSelectedPrompt}
+              />
+            ))}
             {prompts.length === 0 && (
               <div className="col-span-full flex flex-col items-center justify-center h-48 text-muted">
                 <span className="text-4xl mb-2">🗂️</span>
@@ -156,18 +153,13 @@ export default function PromptList() {
             )}
           </div>
 
-          <AnimatePresence>
-            {count > 0 && (
-              <motion.div
-                initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
-                className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-surface border border-border rounded-xl px-4 py-3 shadow-2xl z-50"
-              >
-                <span className="text-sm text-text font-medium">{count} prompt{count > 1 ? 's' : ''} sélectionné{count > 1 ? 's' : ''}</span>
-                <button onClick={handleDeleteSelected} className="px-3 py-1.5 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600">Supprimer</button>
-                <button onClick={clear} className="px-3 py-1.5 border border-border text-sm rounded-lg hover:bg-white/5">Annuler</button>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {count > 0 && (
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-surface border border-border rounded-xl px-4 py-3 shadow-2xl z-50">
+              <span className="text-sm text-text font-medium">{count} prompt{count > 1 ? 's' : ''} sélectionné{count > 1 ? 's' : ''}</span>
+              <button onClick={handleDeleteSelected} className="px-3 py-1.5 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600">Supprimer</button>
+              <button onClick={clear} className="px-3 py-1.5 border border-border text-sm rounded-lg hover:bg-white/5">Annuler</button>
+            </div>
+          )}
         </>
       )}
     </div>

@@ -1,14 +1,13 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
+import { Reorder, motion, AnimatePresence } from 'framer-motion';
 import ThemeGlyph from './ThemeGlyph';
 import { useApp } from '../App';
-import type { Theme } from '../types';
+import type { Theme, SearchFilter } from '../types';
 import { useToast } from './Toast';
-import SettingsModal from './SettingsModal';
 
-export default function Sidebar() {
+export default function Sidebar({ onOpenSettings }: { onOpenSettings: () => void }) {
   const { themes, filter, setFilter, isDark, toggleTheme, refreshThemes } = useApp();
   const { toast } = useToast();
-  const [showSettings, setShowSettings] = useState(false);
 
   // Quick add
   const [addingTheme, setAddingTheme] = useState(false);
@@ -19,8 +18,6 @@ export default function Sidebar() {
   // Inline edit
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editLabel, setEditLabel] = useState('');
-  const [editIcon, setEditIcon] = useState('');
-  const [editColor, setEditColor] = useState('');
 
   // Drag-to-reorder
   const dragId = useRef<string | null>(null);
@@ -28,11 +25,11 @@ export default function Sidebar() {
 
   const handleThemeClick = (themeId: string | undefined) => {
     if (editingId) return; // don't navigate while editing
-    setFilter(f => ({ ...f, theme: themeId, favorites: undefined, trash: undefined }));
+    setFilter(f => ({ ...f, theme: themeId, favorites: undefined, trash: undefined } as SearchFilter));
   };
 
   const handleFavorites = () => {
-    setFilter(f => ({ ...f, favorites: !f.favorites, theme: undefined, trash: undefined }));
+    setFilter(f => ({ ...f, favorites: !f.favorites, theme: undefined, trash: undefined } as SearchFilter));
   };
 
   const handleQuickAddTheme = async () => {
@@ -49,12 +46,10 @@ export default function Sidebar() {
     e.stopPropagation();
     setEditingId(t.id);
     setEditLabel(t.label);
-    setEditIcon(t.icon);
-    setEditColor(t.color);
   };
 
   const saveEdit = async (id: string) => {
-    await window.vault.themes.update(id, { label: editLabel, icon: editIcon, color: editColor });
+    await window.vault.themes.update(id, { label: editLabel });
     refreshThemes();
     setEditingId(null);
     toast('Thématique modifiée ✓');
@@ -68,27 +63,14 @@ export default function Sidebar() {
     toast('Thématique supprimée');
   };
 
-  const handleDragStart = (id: string) => { dragId.current = id; };
-  const handleDragOver = (id: string, e: React.DragEvent) => {
-    e.preventDefault();
-    dragOverId.current = id;
-  };
-  const handleDrop = async () => {
-    const from = dragId.current;
-    const to = dragOverId.current;
-    if (!from || !to || from === to) return;
-    const list = themes as Theme[];
-    const fromIdx = list.findIndex(t => t.id === from);
-    const toIdx   = list.findIndex(t => t.id === to);
-    const reordered = [...list];
-    const [moved] = reordered.splice(fromIdx, 1);
-    reordered.splice(toIdx, 0, moved);
-    // Persist new order
-    await Promise.all(reordered.map((t, i) => window.vault.themes.reorder(t.id, i)));
-    refreshThemes();
-    dragId.current = null;
-    dragOverId.current = null;
-  };
+  const handleReorder = useCallback((newOrder: Theme[]) => {
+    // Optimistic update
+    refreshThemes(); // Optional: used to sync other parts of the UI
+    const updateDB = async () => {
+      await Promise.all(newOrder.map((t, i) => window.vault.themes.reorder(t.id, i)));
+    };
+    updateDB();
+  }, [refreshThemes]);
 
   return (
     <>
@@ -127,7 +109,7 @@ export default function Sidebar() {
           </button>
 
           <button
-            onClick={() => setFilter(f => ({ ...f, trash: true, theme: undefined, favorites: undefined }))}
+            onClick={() => setFilter(f => ({ ...f, trash: true, theme: undefined, favorites: undefined } as SearchFilter))}
             className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-2 transition-colors
               ${(filter as any).trash ? 'bg-red-500/20 text-red-400 font-medium' : 'text-muted hover:text-text hover:bg-white/5'}`}
           >
@@ -169,61 +151,66 @@ export default function Sidebar() {
             </div>
           )}
 
-          {/* Theme list — draggable */}
-          {(themes as Theme[]).map(theme => (
-            <div
-              key={theme.id}
-              draggable
-              onDragStart={() => handleDragStart(theme.id)}
-              onDragOver={e => handleDragOver(theme.id, e)}
-              onDrop={handleDrop}
-              className="group"
-            >
-              {editingId === theme.id ? (
-                /* Inline edit row */
-                <div className="mx-1 my-0.5 p-2 bg-bg border border-primary/40 rounded-xl space-y-1.5">
-                  <div className="flex gap-1">
-                    <input value={editIcon} onChange={e => setEditIcon(e.target.value)}
-                      className="w-10 bg-surface border border-border rounded-lg px-1 py-1 text-center text-base focus:outline-none focus:border-primary select-text"
-                      style={{ WebkitUserSelect: 'text', userSelect: 'text' } as React.CSSProperties} />
-                    <input value={editLabel} onChange={e => setEditLabel(e.target.value)}
-                      className="flex-1 bg-surface border border-border rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-primary select-text"
-                      style={{ WebkitUserSelect: 'text', userSelect: 'text' } as React.CSSProperties} />
-                    <input type="color" value={editColor} onChange={e => setEditColor(e.target.value)}
-                      className="w-8 h-8 rounded-lg border border-border cursor-pointer bg-transparent" />
+          {/* Theme list — framer-motion Reorder */}
+          <Reorder.Group 
+            axis="y" 
+            values={themes} 
+            onReorder={handleReorder}
+            className="space-y-0.5"
+          >
+            {(themes as Theme[]).map(theme => (
+              <Reorder.Item
+                key={theme.id}
+                value={theme}
+                className="group"
+              >
+                {editingId === theme.id ? (
+                  /* Inline edit row */
+                  <div className="mx-1 my-0.5 p-2 bg-bg border border-primary/40 rounded-xl space-y-1.5">
+                    <div className="flex gap-1">
+                      <input value={editLabel} onChange={e => setEditLabel(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') saveEdit(theme.id); if (e.key === 'Escape') setEditingId(null); }}
+                        className="flex-1 bg-surface border border-border rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-primary select-text"
+                        style={{ WebkitUserSelect: 'text', userSelect: 'text' } as React.CSSProperties}
+                        autoFocus />
+                    </div>
+                    <div className="flex gap-1">
+                      <button onClick={() => saveEdit(theme.id)}
+                        className="flex-1 py-1 rounded-lg bg-primary text-white text-xs font-semibold">✓ OK</button>
+                      <button onClick={() => setEditingId(null)}
+                        className="px-2 py-1 rounded-lg border border-border text-xs text-muted">✕</button>
+                    </div>
                   </div>
-                  <div className="flex gap-1">
-                    <button onClick={() => saveEdit(theme.id)}
-                      className="flex-1 py-1 rounded-lg bg-primary text-white text-xs font-semibold">✓ OK</button>
-                    <button onClick={() => setEditingId(null)}
-                      className="px-2 py-1 rounded-lg border border-border text-xs text-muted">✕</button>
-                  </div>
-                </div>
-              ) : (
-                /* Normal row */
-                <button
-                  onClick={() => handleThemeClick(theme.id)}
-                  style={{ borderLeftColor: filter.theme === theme.id ? theme.color : 'transparent' }}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-2 transition-colors border-l-2
-                    ${filter.theme === theme.id ? 'bg-white/10 font-medium' : 'text-muted hover:text-text hover:bg-white/5'}`}
-                >
-                  <span className="cursor-grab text-muted/30 text-xs mr-0.5 opacity-0 group-hover:opacity-100">⠿</span>
-                  <ThemeGlyph theme={theme} />
-                  <span className="flex-1 truncate">{theme.label}</span>
-                  {theme.count !== undefined && <span className="text-xs text-muted">{theme.count}</span>}
-                  {/* Edit/delete buttons — show on hover */}
-                  <span className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-                    <button onClick={e => startEdit(theme, e)}
-                      className="text-muted hover:text-primary text-xs px-0.5 transition-colors" title="Modifier">✏️</button>
-                    {theme.is_custom === 1 && (
-                      <button onClick={e => handleDeleteTheme(theme.id, e)}
-                        className="text-red-400/50 hover:text-red-400 text-xs px-0.5 transition-colors" title="Supprimer">🗑</button>
+                ) : (
+                  /* Normal row */
+                  <button
+                    onClick={() => handleThemeClick(theme.id)}
+                    style={{ borderLeftColor: filter.theme === theme.id ? theme.color : 'transparent' }}
+                    className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-2 transition-colors border-l-2
+                      ${filter.theme === theme.id ? 'bg-white/10 font-medium' : 'text-muted hover:text-text hover:bg-white/5'}`}
+                  >
+                    <span className="cursor-grab text-muted/30 text-xs mr-0.5 opacity-0 group-hover:opacity-100">⠿</span>
+                    <ThemeGlyph theme={theme} className="w-5 h-5 flex-shrink-0" />
+                    <span className="flex-1 truncate min-w-0 pr-1">{theme.label}</span>
+                    {theme.count !== undefined && (
+                      <span className="text-[10px] font-bold text-muted/40 flex-shrink-0">
+                        {theme.count}
+                      </span>
                     )}
-                  </span>
-                </button>
-              )}
-            </div>
-          ))}
+                    {/* Edit/delete buttons — show on hover */}
+                    <span className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                      <button onClick={e => startEdit(theme, e)}
+                        className="text-muted hover:text-primary text-xs px-0.5 transition-colors" title="Modifier">✏️</button>
+                      {theme.is_custom === 1 && (
+                        <button onClick={e => handleDeleteTheme(theme.id, e)}
+                          className="text-red-400/50 hover:text-red-400 text-xs px-0.5 transition-colors" title="Supprimer">🗑</button>
+                      )}
+                    </span>
+                  </button>
+                )}
+              </Reorder.Item>
+            ))}
+          </Reorder.Group>
         </nav>
 
         <div className="p-3 space-y-1 border-t border-border flex-shrink-0">
@@ -232,14 +219,12 @@ export default function Sidebar() {
             <span>{isDark ? '☀️' : '🌙'}</span>
             <span>{isDark ? 'Mode clair' : 'Mode sombre'}</span>
           </button>
-          <button onClick={() => setShowSettings(true)}
+          <button onClick={onOpenSettings}
             className="w-full text-left px-3 py-2 rounded-lg text-sm text-muted hover:text-text hover:bg-white/5 flex items-center gap-2">
             <span>⚙️</span><span>Paramètres</span>
           </button>
         </div>
       </aside>
-
-      <SettingsModal open={showSettings} onClose={() => setShowSettings(false)} />
     </>
   );
 }

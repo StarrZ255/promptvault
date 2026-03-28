@@ -41,6 +41,8 @@ export interface SearchFilter {
   minRating?: number;
   sortBy?: 'relevance' | 'updated_at' | 'use_count' | 'rating';
   trash?: boolean;
+  limit?: number;
+  offset?: number;
 }
 
 export interface ImportReport {
@@ -71,6 +73,7 @@ export interface VaultAPI {
     restore: (id: string) => Promise<void>;
     permanentDelete: (id: string) => Promise<void>;
     emptyTrash: () => Promise<{ deleted: number }>;
+    getSuppressedBuiltins: () => Promise<Prompt[]>;
   };
   themes: {
     getAll: () => Promise<Theme[]>;
@@ -79,6 +82,7 @@ export interface VaultAPI {
     delete: (id: string) => Promise<void>;
     restore: () => Promise<{ restored: number }>;
     reorder: (id: string, order: number) => Promise<void>;
+    saveIconImage: (themeId: string) => Promise<string | null>;
   };
   import: {
     fromJson: (filePath: string) => Promise<ImportReport>;
@@ -107,9 +111,13 @@ export interface VaultAPI {
   window: {
     openQuickCapture: () => void;
     openImport: () => void;
-    openMini?: () => void;
-    openMain?: () => void;
-    closeWindow: () => void;
+    openMini: () => void;
+    openMain: () => void;
+    editPrompt: (p: Prompt) => void;
+    quickCapture: () => void;
+    close: () => void;
+    minimize: () => void;
+    maximize: () => void;
   };
   on: (event: string, callback: (...args: unknown[]) => void) => () => void;
 }

@@ -3,10 +3,35 @@
 @import '@fontsource/syne/700.css';
 @import '@fontsource/dm-sans/400.css';
 @import '@fontsource/dm-sans/500.css';
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --bg: #F8FAFC;
+  --surface: #FFFFFF;
+  --border: #E2E8F0;
+  --primary: #6C63FF;
+  --secondary: #00D4AA;
+  --muted: #64748B;
+  --text: #1E293B;
+  --scrollbar: #CBD5E1;
+}
+
+.dark {
+  --bg: #0A0A0F;
+  --surface: #12121A;
+  --border: #1E1E2E;
+  --primary: #6C63FF;
+  --secondary: #00D4AA;
+  --muted: #6B7280;
+  --text: #E2E8F0;
+  --scrollbar: #2D2D3F;
+}
 
 /* Grain overlay subtil */
 @layer base {
@@ -18,8 +43,22 @@
     pointer-events: none;
     z-index: 9999;
   }
+  
+  html, body {
+    background-color: var(--bg);
+    color: var(--text);
+  }
+}
+
+html.transparent, body.transparent {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+html.transparent::before, body.transparent::before {
+  display: none !important;
 }
 
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #2D2D3F; border-radius: 2px; }
+::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 2px; }

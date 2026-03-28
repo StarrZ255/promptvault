@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, memo } from 'react';
 import type { Prompt, Theme } from '../types';
 import { useToast } from './Toast';
 import ThemeGlyph from './ThemeGlyph';
@@ -13,7 +12,11 @@ interface Props {
   onClick: (p: Prompt) => void;
 }
 
-export default function PromptCard({ prompt, theme, isSelected, isActive, onSelect, onClick }: Props) {
+/**
+ * COMPOSANT MÉMOÏSÉ POUR PERFORMANCE GLOBALE
+ * Évite les lenteurs d'affichage pendant le scroll dans l'application principale.
+ */
+function PromptCard({ prompt, theme, isSelected, isActive, onSelect, onClick }: Props) {
   const [hovered, setHovered] = useState(false);
   const { toast } = useToast();
 
@@ -25,21 +28,16 @@ export default function PromptCard({ prompt, theme, isSelected, isActive, onSele
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.15 }}
-      onHoverStart={() => setHovered(true)}
-      onHoverEnd={() => setHovered(false)}
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       onClick={() => onClick(prompt)}
       className={`relative p-4 rounded-xl border cursor-pointer transition-colors group
         ${isActive ? 'border-primary bg-primary/10' : 'border-border bg-surface hover:border-primary/40'}
         ${isSelected ? 'ring-1 ring-primary' : ''}`}
     >
       {(hovered || isSelected) && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
+        <div
           className="absolute top-3 left-3 z-10"
           onClick={e => { e.stopPropagation(); onSelect(prompt.id); }}
         >
@@ -47,7 +45,7 @@ export default function PromptCard({ prompt, theme, isSelected, isActive, onSele
             ${isSelected ? 'bg-primary border-primary' : 'border-muted bg-bg'}`}>
             {isSelected && <span className="text-white text-xs leading-none">✓</span>}
           </div>
-        </motion.div>
+        </div>
       )}
 
       <div className="flex items-center justify-between mb-2">
@@ -79,6 +77,9 @@ export default function PromptCard({ prompt, theme, isSelected, isActive, onSele
       </div>
 
       {prompt.is_favorite === 1 && <div className="absolute top-3 right-3 text-yellow-400 text-xs">⭐</div>}
-    </motion.div>
+    </div>
   );
 }
+
+// Export avec memo pour éviter le lag au scroll
+export default memo(PromptCard);

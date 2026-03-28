@@ -1,7 +1,8 @@
 // createRequire charge better-sqlite3 via Node.js natif — complètement invisible
 // à Rollup/Vite, aucun bundler ne peut l'intercepter ou le transformer.
 import { createRequire } from 'module';
-const Database = createRequire(__filename)('better-sqlite3') as typeof import('better-sqlite3').default;
+const sqlite3 = createRequire(__filename)('better-sqlite3');
+import type { Database as DatabaseType } from 'better-sqlite3';
 import { app } from 'electron';
 import path from 'path';
 import fs from 'fs';
@@ -13,7 +14,7 @@ const dbPath = process.env.PORTABLE_EXECUTABLE_DIR
   ? path.join(process.env.PORTABLE_EXECUTABLE_DIR, 'vault.db')
   : path.join(app.getPath('userData'), 'vault.db');
 
-export let db: Database.Database;
+export let db: DatabaseType;
 
 const BUILTIN_THEMES = [
   { id: 'notebooklm',    label: 'NotebookLM',            icon: '📓', color: '#FF6B35' },
@@ -39,7 +40,7 @@ const INSERT_PROMPT_SQL = `
 `;
 
 export function initDatabase(): void {
-  db = new Database(dbPath);
+  db = new sqlite3(dbPath);
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
 
@@ -139,6 +140,7 @@ function parseRow(row: Record<string, unknown>): Record<string, unknown> {
 export function getPrompts(filter: {
   query?: string; theme?: string; favorites?: boolean;
   type?: string; lang?: string; minRating?: number; sortBy?: string;
+  limit?: number; offset?: number;
 }): unknown[] {
   let sql = `SELECT * FROM prompts WHERE deleted = 0 AND IFNULL(suppressed, 0) = 0`;
   const params: unknown[] = [];
@@ -162,6 +164,16 @@ export function getPrompts(filter: {
     relevance:  'updated_at DESC',
   };
   sql += ` ORDER BY ${sortMap[filter.sortBy ?? 'updated_at'] ?? 'updated_at DESC'}`;
+
+  // Ajout de la pagination (Performance)
+  if (filter.limit) {
+    sql += ` LIMIT ?`;
+    params.push(filter.limit);
+    if (filter.offset) {
+      sql += ` OFFSET ?`;
+      params.push(filter.offset);
+    }
+  }
 
   return (db.prepare(sql).all(...params) as Record<string, unknown>[]).map(parseRow);
 }
@@ -276,7 +288,7 @@ export function createTheme(data: { id: string; label: string; icon?: string; co
 export function updateTheme(id: string, data: { label?: string; icon?: string; color?: string; icon_image?: string | null }): unknown {
   const fields = Object.keys(data).filter(k => ['label','icon','color','icon_image'].includes(k)).map(k => `${k} = @${k}`).join(', ');
   if (!fields) return;
-  db.prepare(`UPDATE themes SET ${fields} WHERE id = @id AND is_custom = 1`).run({ ...data, id });
+  db.prepare(`UPDATE themes SET ${fields} WHERE id = @id`).run({ ...data, id });
   return data;
 }
 
@@ -289,7 +301,7 @@ export function deleteTheme(id: string): void {
 }
 
 export function setThemeIconImage(themeId: string, destPath: string): void {
-  db.prepare(`UPDATE themes SET icon_image = ? WHERE id = ? AND is_custom = 1`).run(destPath, themeId);
+  db.prepare(`UPDATE themes SET icon_image = ? WHERE id = ?`).run(destPath, themeId);
 }
 
 export function importFromJson(filePath: string): { imported: number; perfectDuplicates: number; titleDuplicates: number; errors: string[] } {
