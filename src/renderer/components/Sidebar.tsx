@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../App';
 import type { Theme } from '../types';
 import { useToast } from './Toast';
@@ -6,6 +6,22 @@ import { useToast } from './Toast';
 export default function Sidebar() {
   const { themes, filter, setFilter, isDark, toggleTheme } = useApp();
   const { toast } = useToast();
+  const [startupEnabled, setStartupEnabled] = useState(false);
+
+  useEffect(() => {
+    // Lire le statut de démarrage auto (window.vault.startup disponible en prod seulement)
+    if ((window as any).vault?.startup) {
+      (window as any).vault.startup.get().then((v: boolean) => setStartupEnabled(v));
+    }
+  }, []);
+
+  const handleToggleStartup = async () => {
+    if (!(window as any).vault?.startup) return;
+    const next = !startupEnabled;
+    await (window as any).vault.startup.set(next);
+    setStartupEnabled(next);
+    toast(next ? 'Démarrage automatique activé ✓' : 'Démarrage automatique désactivé');
+  };
 
   const handleThemeClick = (themeId: string | undefined) => {
     setFilter(f => ({ ...f, theme: themeId, favorites: undefined }));
@@ -86,6 +102,14 @@ export default function Sidebar() {
         >
           <span>🔄</span>
           <span>Restaurer officiels</span>
+        </button>
+        <button
+          onClick={handleToggleStartup}
+          className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-2 transition-colors
+            ${startupEnabled ? 'text-secondary hover:bg-secondary/10' : 'text-muted hover:text-text hover:bg-white/5'}`}
+        >
+          <span>{startupEnabled ? '✅' : '🚀'}</span>
+          <span>Démarrage auto {startupEnabled ? '(activé)' : '(désactivé)'}</span>
         </button>
       </div>
     </aside>

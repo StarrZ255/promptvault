@@ -6,19 +6,21 @@ export default defineConfig({
   main: {
     plugins: [externalizeDepsPlugin()],
     build: {
-      lib: {
-        entry: resolve('src/main/main.ts'),
-      },
       rollupOptions: {
         external: ['better-sqlite3'],
+        input: {
+          main: resolve('src/main/main.ts'),
+        },
       },
     },
   },
   preload: {
     plugins: [externalizeDepsPlugin()],
     build: {
-      lib: {
-        entry: resolve('src/preload/index.ts'),
+      rollupOptions: {
+        input: {
+          index: resolve('src/preload/index.ts'),
+        },
       },
     },
   },

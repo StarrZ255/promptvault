@@ -1,4 +1,4 @@
-import { ipcMain, clipboard, dialog, BrowserWindow } from 'electron';
+import { ipcMain, clipboard, dialog, BrowserWindow, app } from 'electron';
 import * as db from './database';
 import fs from 'fs';
 
@@ -62,5 +62,18 @@ export function registerHandlers(
   });
   ipcMain.on('window:closeWindow', (event) => {
     BrowserWindow.fromWebContents(event.sender)?.hide();
+  });
+
+  // Démarrage automatique avec Windows
+  ipcMain.handle('system:getStartup', () => {
+    return app.getLoginItemSettings().openAtLogin;
+  });
+  ipcMain.handle('system:setStartup', (_, enabled: boolean) => {
+    app.setLoginItemSettings({
+      openAtLogin: enabled,
+      path: app.getPath('exe'),
+      args: enabled ? ['--hidden'] : [],
+    });
+    return enabled;
   });
 }

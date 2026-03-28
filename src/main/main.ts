@@ -112,9 +112,23 @@ function registerShortcuts(): void {
 }
 
 app.whenReady().then(() => {
+  // Démarrage automatique avec Windows (peut être toggleé via IPC)
+  if (app.isPackaged) {
+    app.setLoginItemSettings({
+      openAtLogin: true,
+      path: app.getPath('exe'),
+      args: ['--hidden'],
+    });
+  }
+
   initDatabase();
   registerHandlers(getOrCreateQuickCapture, getOrCreateImportWindow);
+
+  // Ne pas afficher la fenêtre si lancé au démarrage avec --hidden
+  const startHidden = process.argv.includes('--hidden');
   mainWindow = createMainWindow();
+  if (startHidden) mainWindow.hide();
+
   registerShortcuts();
 
   app.on('activate', () => {

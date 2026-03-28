@@ -41,6 +41,10 @@ contextBridge.exposeInMainWorld('vault', {
     openImport:       () => ipcRenderer.send('window:openImport'),
     closeWindow:      () => ipcRenderer.send('window:closeWindow'),
   },
+  startup: {
+    get:    ()                  => invoke('system:getStartup'),
+    set:    (enabled: boolean)  => invoke('system:setStartup', enabled),
+  },
   on: (event: string, callback: (...args: unknown[]) => void) => {
     const handler = (_: Electron.IpcRendererEvent, ...args: unknown[]) => callback(...args);
     ipcRenderer.on(event, handler);
