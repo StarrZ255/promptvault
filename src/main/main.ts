@@ -1,4 +1,4 @@
-import { app, BrowserWindow, globalShortcut, shell, dialog } from 'electron';
+import { app, BrowserWindow, globalShortcut, shell, dialog, Tray, Menu, nativeImage } from 'electron';
 import path from 'path';
 import { initDatabase } from './database';
 import { registerHandlers } from './ipcHandlers';
@@ -8,7 +8,29 @@ let mainWindow: BrowserWindow | null = null;
 let miniWindow: BrowserWindow | null = null;
 let quickCaptureWindow: BrowserWindow | null = null;
 let importWindow: BrowserWindow | null = null;
+let tray: Tray | null = null;
 let currentShortcuts: ShortcutMap = loadShortcuts();
+
+// Icône 16×16 violette (#6C63FF) encodée en PNG base64 — générée programmatiquement
+const TRAY_ICON_B64 = 'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGUlEQVR4nGPISf7/nxLMMGrAqAGjBgwXAwCW0c0fT6XdgwAAAABJRU5ErkJggg==';
+
+function createTrayIcon(): void {
+  const icon = nativeImage.createFromDataURL(`data:image/png;base64,${TRAY_ICON_B64}`);
+  tray = new Tray(icon);
+  tray.setToolTip('PromptVault');
+
+  const buildMenu = () => Menu.buildFromTemplate([
+    { label: '📋 Ouvrir PromptVault',  click: () => showMainWindow() },
+    { label: '⚡ Mini-fenêtre (Alt+P)', click: () => { const w = getOrCreateMiniWindow(); w.show(); w.focus(); } },
+    { label: '✏️ Capture rapide (Alt+N)', click: () => { const w = getOrCreateQuickCapture(); w.show(); w.focus(); } },
+    { type: 'separator' },
+    { label: '❌ Quitter', click: () => { tray?.destroy(); app.quit(); } },
+  ]);
+
+  tray.setContextMenu(buildMenu());
+  tray.on('click', () => showMainWindow());
+  tray.on('double-click', () => showMainWindow());
+}
 
 function getRendererUrl(hash: string): string {
   const devUrl = process.env['ELECTRON_RENDERER_URL'];
@@ -147,6 +169,8 @@ app.whenReady().then(() => {
     () => currentShortcuts,
     updateShortcuts,
   );
+
+  createTrayIcon();
 
   const startHidden = process.argv.includes('--hidden');
   mainWindow = createMainWindow();

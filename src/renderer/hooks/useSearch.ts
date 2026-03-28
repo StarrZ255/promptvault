@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Prompt, SearchFilter } from '../types';
 
-export function useSearch(filter: SearchFilter) {
+export function useSearch(filter: SearchFilter, version = 0) {
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [loading, setLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
@@ -21,7 +21,8 @@ export function useSearch(filter: SearchFilter) {
     const delay = filter.query ? 150 : 0;
     debounceRef.current = setTimeout(() => fetchPrompts(filter), delay);
     return () => clearTimeout(debounceRef.current);
-  }, [filter, fetchPrompts]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter, fetchPrompts, version]);
 
   return { prompts, loading, refresh: () => fetchPrompts(filter) };
 }

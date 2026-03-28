@@ -163,6 +163,12 @@ export function getPromptById(id: string): unknown {
   return row ? parseRow(row) : null;
 }
 
+function serializeArrayField(val: unknown): string {
+  if (Array.isArray(val)) return JSON.stringify(val);
+  if (typeof val === 'string') return val;
+  return '[]';
+}
+
 export function createPrompt(data: Partial<MappedPrompt>): unknown {
   const id = data.id ?? crypto.randomUUID();
   const now = new Date().toISOString();
@@ -170,9 +176,11 @@ export function createPrompt(data: Partial<MappedPrompt>): unknown {
   const sha256 = crypto.createHash('sha256').update(body).digest('hex');
   const row = {
     id, title: data.title ?? 'Sans titre', body, theme: data.theme ?? 'autre',
-    tags: data.tags ?? '[]', target_ai: data.target_ai ?? '[]',
-    type: data.type ?? 'task', variables: data.variables ?? '[]',
-    rating: data.rating ?? 0, is_favorite: 0, is_builtin: 0, locked: 0,
+    tags:       serializeArrayField(data.tags),
+    target_ai:  serializeArrayField(data.target_ai),
+    type: data.type ?? 'task',
+    variables:  serializeArrayField(data.variables),
+    rating: data.rating ?? 0, is_favorite: data.is_favorite ?? 0, is_builtin: 0, locked: 0,
     lang: data.lang ?? 'fr', use_count: 0, sha256,
     created_at: now, updated_at: now,
   };
@@ -183,13 +191,18 @@ export function createPrompt(data: Partial<MappedPrompt>): unknown {
 export function updatePrompt(id: string, data: Partial<MappedPrompt>): unknown {
   const now = new Date().toISOString();
   const allowed = ['title','body','theme','tags','target_ai','type','variables','rating','is_favorite','locked','lang'];
-  const fields = Object.keys(data)
+  // Serialize any array fields before binding to SQLite
+  const serialized: Record<string, unknown> = { ...data as Record<string, unknown> };
+  for (const key of ['tags', 'target_ai', 'variables']) {
+    if (key in serialized) serialized[key] = serializeArrayField(serialized[key]);
+  }
+  const fields = Object.keys(serialized)
     .filter(k => allowed.includes(k))
     .map(k => `${k} = @${k}`)
     .join(', ');
   if (!fields) return getPromptById(id);
   db.prepare(`UPDATE prompts SET ${fields}, updated_at = @updated_at WHERE id = @id`)
-    .run({ ...data, id, updated_at: now });
+    .run({ ...serialized, id, updated_at: now });
   return getPromptById(id);
 }
 
@@ -228,6 +241,13 @@ export function getThemes(): unknown[] {
 export function createTheme(data: { id: string; label: string; icon?: string; color?: string }): unknown {
   db.prepare(`INSERT INTO themes (id, label, icon, color, is_custom) VALUES (?, ?, ?, ?, 1)`)
     .run(data.id, data.label, data.icon ?? '🗂️', data.color ?? '#6C63FF');
+  return data;
+}
+
+export function updateTheme(id: string, data: { label?: string; icon?: string; color?: string }): unknown {
+  const fields = Object.keys(data).filter(k => ['label','icon','color'].includes(k)).map(k => `${k} = @${k}`).join(', ');
+  if (!fields) return;
+  db.prepare(`UPDATE themes SET ${fields} WHERE id = @id AND is_custom = 1`).run({ ...data, id });
   return data;
 }
 

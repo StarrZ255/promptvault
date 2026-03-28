@@ -16,10 +16,11 @@ contextBridge.exposeInMainWorld('vault', {
     incrementUseCount: (id: string)                   => invoke('prompts:incrementUseCount', id),
   },
   themes: {
-    getAll:  ()              => invoke('themes:getAll'),
-    create:  (data: unknown) => invoke('themes:create', data),
-    delete:  (id: string)    => invoke('themes:delete', id),
-    restore: ()              => invoke('themes:restore'),
+    getAll:  ()                        => invoke('themes:getAll'),
+    create:  (data: unknown)           => invoke('themes:create', data),
+    update:  (id: string, data: unknown) => invoke('themes:update', id, data),
+    delete:  (id: string)              => invoke('themes:delete', id),
+    restore: ()                        => invoke('themes:restore'),
   },
   import: {
     fromJson:  (filePath: string) => invoke('import:fromJson', filePath),

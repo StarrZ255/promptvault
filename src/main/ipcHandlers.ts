@@ -24,6 +24,7 @@ export function registerHandlers(
   // ─── Thématiques ────────────────────────────────────────────────────────────
   ipcMain.handle('themes:getAll',   () => db.getThemes());
   ipcMain.handle('themes:create',   (_, data) => db.createTheme(data));
+  ipcMain.handle('themes:update',   (_, id, data) => db.updateTheme(id, data));
   ipcMain.handle('themes:delete',   (_, id) => db.deleteTheme(id));
   ipcMain.handle('themes:restore',  () => db.restoreBuiltinPrompts());
 

@@ -65,6 +65,7 @@ export interface VaultAPI {
   themes: {
     getAll: () => Promise<Theme[]>;
     create: (data: Partial<Theme>) => Promise<Theme>;
+    update: (id: string, data: Partial<Theme>) => Promise<Theme>;
     delete: (id: string) => Promise<void>;
     restore: () => Promise<{ restored: number }>;
   };
@@ -94,8 +95,8 @@ export interface VaultAPI {
   window: {
     openQuickCapture: () => void;
     openImport: () => void;
-    openMini: () => void;
-    openMain: () => void;
+    openMini?: () => void;
+    openMain?: () => void;
     closeWindow: () => void;
   };
   on: (event: string, callback: (...args: unknown[]) => void) => () => void;

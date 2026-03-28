@@ -6,7 +6,7 @@ import { useToast } from './Toast';
 import type { Prompt } from '../types';
 
 export default function Editor() {
-  const { selectedPrompt, setSelectedPrompt, themes, refreshThemes } = useApp();
+  const { selectedPrompt, setSelectedPrompt, themes, refreshThemes, bumpPromptsVersion } = useApp();
   const { toast } = useToast();
   const [local, setLocal] = useState<Prompt | null>(null);
   const [saving, setSaving] = useState(false);
@@ -26,7 +26,8 @@ export default function Editor() {
       toast('Sauvegardé ✓');
     }
     refreshThemes();
-  }, [isNew, local, setSelectedPrompt, toast, refreshThemes]);
+    bumpPromptsVersion();
+  }, [isNew, local, setSelectedPrompt, toast, refreshThemes, bumpPromptsVersion]);
 
   const { scheduleAutoSave } = useAutoSave(local, save);
 
@@ -53,6 +54,7 @@ export default function Editor() {
         toast('Sauvegardé ✓');
       }
       refreshThemes();
+      bumpPromptsVersion();
     } finally {
       setSaving(false);
     }
@@ -63,6 +65,7 @@ export default function Editor() {
     await window.vault.prompts.duplicate(local.id);
     toast('Prompt dupliqué ✓');
     refreshThemes();
+    bumpPromptsVersion();
   };
 
   const handleDelete = async () => {
@@ -72,6 +75,7 @@ export default function Editor() {
     setSelectedPrompt(null);
     toast('Prompt supprimé');
     refreshThemes();
+    bumpPromptsVersion();
   };
 
   if (!local) return null;

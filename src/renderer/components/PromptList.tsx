@@ -8,10 +8,10 @@ import { useToast } from './Toast';
 import type { Prompt } from '../types';
 
 export default function PromptList() {
-  const { filter, setSelectedPrompt, selectedPrompt, themes, refreshThemes } = useApp();
+  const { filter, setSelectedPrompt, selectedPrompt, themes, refreshThemes, promptsVersion } = useApp();
   const [searchInput, setSearchInput] = useState('');
   const [isGrid, setIsGrid] = useState(true);
-  const { prompts, refresh } = useSearch({ ...filter, query: searchInput });
+  const { prompts, refresh } = useSearch({ ...filter, query: searchInput }, promptsVersion);
   const { selected, toggle, selectAll, clear, count } = useSelection(prompts.map(p => p.id));
   const { toast } = useToast();
 

@@ -45,6 +45,8 @@ interface AppState {
   setFilter: (f: SearchFilter) => void;
   themes: Theme[];
   refreshThemes: () => void;
+  promptsVersion: number;
+  bumpPromptsVersion: () => void;
   isDark: boolean;
   toggleTheme: () => void;
   showCommandPalette: boolean;
@@ -60,6 +62,9 @@ function MainLayout() {
   const [themes, setThemes] = useState<Theme[]>([]);
   const [isDark, setIsDark] = useState(true);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [promptsVersion, setPromptsVersion] = useState(0);
+
+  const bumpPromptsVersion = useCallback(() => setPromptsVersion(v => v + 1), []);
 
   const refreshThemes = useCallback(async () => {
     const t = await window.vault.themes.getAll();
@@ -89,6 +94,7 @@ function MainLayout() {
       selectedPrompt, setSelectedPrompt,
       filter, setFilter,
       themes, refreshThemes,
+      promptsVersion, bumpPromptsVersion,
       isDark, toggleTheme: () => setIsDark(d => !d),
       showCommandPalette, setShowCommandPalette,
     }}>
