@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('vault', {
     restore:           (id: string) => invoke('prompts:restore', id),
     permanentDelete:   (id: string) => invoke('prompts:permanentDelete', id),
     emptyTrash:        ()           => invoke('prompts:emptyTrash'),
+    getSuppressedBuiltins: ()        => invoke('prompts:getSuppressedBuiltins'),
   },
   themes: {
     getAll:  ()                        => invoke('themes:getAll'),
@@ -25,6 +26,8 @@ contextBridge.exposeInMainWorld('vault', {
     update:  (id: string, data: unknown) => invoke('themes:update', id, data),
     delete:  (id: string)              => invoke('themes:delete', id),
     restore: ()                        => invoke('themes:restore'),
+    saveIconImage: (themeId: string)   => invoke('themes:saveIconImage', themeId),
+    reorder: (id: string, order: number) => invoke('themes:reorder', id, order),
   },
   import: {
     fromJson:  (filePath: string) => invoke('import:fromJson', filePath),
@@ -40,6 +43,7 @@ contextBridge.exposeInMainWorld('vault', {
     openFileDialog:  (opts: unknown)  => invoke('system:openFileDialog', opts),
     saveFileDialog:  (opts: unknown)  => invoke('system:saveFileDialog', opts),
     copyToClipboard: (text: string)   => invoke('system:copyToClipboard', text),
+    pathToFileUrl: (filePath: string)  => invoke('system:pathToFileUrl', filePath) as Promise<string>,
   },
   shortcuts: {
     get: ()                  => invoke('shortcuts:get'),

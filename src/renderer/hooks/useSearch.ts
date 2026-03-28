@@ -11,6 +11,8 @@ export function useSearch(filter: SearchFilter, version = 0) {
     try {
       const results = await window.vault.search.query(f);
       setPrompts(results as Prompt[]);
+    } catch {
+      setPrompts([]);
     } finally {
       setLoading(false);
     }

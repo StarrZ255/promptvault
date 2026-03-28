@@ -98,14 +98,14 @@ function MainLayout() {
       isDark, toggleTheme: () => setIsDark(d => !d),
       showCommandPalette, setShowCommandPalette,
     }}>
-      <div className="flex h-screen w-screen overflow-hidden bg-bg text-text font-body select-none">
-        {/* Zone de drag pour la barre de titre custom */}
+      <div className="flex h-screen w-screen overflow-hidden bg-bg text-text font-body select-none [&_input]:select-text [&_textarea]:select-text [&_select]:select-text">
+        {/* Drag region — only over sidebar title area, NOT over main content */}
         <div
-          className="fixed top-0 left-0 right-0 h-8 z-50"
+          className="fixed top-0 left-0 w-56 h-10 z-0 pointer-events-none"
           style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
         />
         <Sidebar />
-        <main className="flex flex-1 overflow-hidden pt-8">
+        <main className="flex flex-1 overflow-hidden">
           <PromptList />
           {selectedPrompt && <Editor />}
         </main>

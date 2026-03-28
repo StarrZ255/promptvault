@@ -18,6 +18,7 @@ export interface Prompt {
   updated_at: string;
   deleted?: 0 | 1;
   deleted_at?: string;
+  suppressed?: 0 | 1;
 }
 
 export interface Theme {
@@ -27,6 +28,8 @@ export interface Theme {
   color: string;
   is_custom: 0 | 1;
   count?: number;
+  icon_image?: string | null;
+  sort_order?: number;
 }
 
 export interface SearchFilter {
@@ -75,6 +78,7 @@ export interface VaultAPI {
     update: (id: string, data: Partial<Theme>) => Promise<Theme>;
     delete: (id: string) => Promise<void>;
     restore: () => Promise<{ restored: number }>;
+    reorder: (id: string, order: number) => Promise<void>;
   };
   import: {
     fromJson: (filePath: string) => Promise<ImportReport>;
@@ -90,6 +94,7 @@ export interface VaultAPI {
     openFileDialog: (opts: { filters?: { name: string; extensions: string[] }[] }) => Promise<string | null>;
     saveFileDialog: (opts: { defaultPath?: string }) => Promise<string | null>;
     copyToClipboard: (text: string) => Promise<void>;
+    pathToFileUrl: (filePath: string) => Promise<string>;
   };
   shortcuts: {
     get: () => Promise<{ toggleMini: string; quickCapture: string; focusSearch: string; openMain: string }>;

@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../App';
 import { useToast } from './Toast';
-import type { Theme } from '../types';
+import type { Theme, Prompt } from '../types';
+import ThemeGlyph from './ThemeGlyph';
 
 interface ShortcutMap { toggleMini: string; quickCapture: string; focusSearch: string; openMain: string; }
 const SHORTCUT_LABELS: Record<keyof ShortcutMap, string> = {
@@ -16,7 +17,7 @@ const SHORTCUT_LABELS: Record<keyof ShortcutMap, string> = {
 interface Props { open: boolean; onClose: () => void; }
 
 export default function SettingsModal({ open, onClose }: Props) {
-  const { isDark, toggleTheme, themes, refreshThemes } = useApp();
+  const { isDark, toggleTheme, themes, refreshThemes, bumpPromptsVersion } = useApp();
   const { toast } = useToast();
   const [tab, setTab] = useState<'general' | 'shortcuts' | 'themes' | 'data'>('general');
 
@@ -40,11 +41,18 @@ export default function SettingsModal({ open, onClose }: Props) {
   const [editIcon, setEditIcon] = useState('');
   const [editColor, setEditColor] = useState('');
 
+  const [suppressedBuiltins, setSuppressedBuiltins] = useState<Prompt[]>([]);
+
   useEffect(() => {
     if (!open) return;
     window.vault.startup?.get().then((v: boolean) => setStartupEnabled(v));
     window.vault.shortcuts?.get().then((s: ShortcutMap) => setShortcuts(s));
   }, [open]);
+
+  useEffect(() => {
+    if (!open || tab !== 'data') return;
+    window.vault.prompts.getSuppressedBuiltins().then(r => setSuppressedBuiltins(r as Prompt[]));
+  }, [open, tab]);
 
   useEffect(() => { recordingRef.current = recording; }, [recording]);
 
@@ -122,6 +130,22 @@ export default function SettingsModal({ open, onClose }: Props) {
     toast('Thématique supprimée');
   };
 
+  const handlePickThemeImage = async (themeId: string) => {
+    const p = await window.vault.themes.saveIconImage(themeId);
+    if (p) {
+      refreshThemes();
+      toast('Image de thématique enregistrée ✓');
+    }
+  };
+
+  const handleRestoreSuppressed = async (id: string) => {
+    await window.vault.prompts.update(id, { suppressed: 0 });
+    setSuppressedBuiltins(s => s.filter(p => p.id !== id));
+    bumpPromptsVersion();
+    refreshThemes();
+    toast('Prompt réaffiché dans la bibliothèque ✓');
+  };
+
   const TABS = [
     { key: 'general',   label: '⚙️ Général' },
     { key: 'shortcuts', label: '⌨️ Raccourcis' },
@@ -152,7 +176,7 @@ export default function SettingsModal({ open, onClose }: Props) {
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ type: 'spring', stiffness: 350, damping: 28 }}
             style={{ position: 'relative', zIndex: 1, width: 520, maxHeight: '80vh' }}
-            className="bg-surface border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+            className="bg-surface border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden [&_input]:select-text [&_textarea]:select-text [&_select]:select-text"
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}
@@ -188,18 +212,24 @@ export default function SettingsModal({ open, onClose }: Props) {
                   </section>
                   <section className="space-y-2">
                     <p className="text-xs font-semibold text-muted uppercase tracking-wider">Système</p>
-                    <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-bg border border-border">
-                      <div className="flex items-center gap-3">
-                        <span className="text-xl">🚀</span>
-                        <div>
+                    <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-bg border border-border">
+                      <div className="flex min-w-0 flex-1 items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-bg">
+                          <span className="text-xl leading-none" aria-hidden>🚀</span>
+                        </div>
+                        <div className="min-w-0">
                           <p className="text-sm">Démarrage automatique</p>
                           <p className="text-xs text-muted">Lancer PromptVault au démarrage de Windows</p>
                         </div>
                       </div>
-                      <button onClick={handleToggleStartup}
-                        className={`relative w-11 h-6 rounded-full transition-colors ${startupEnabled ? 'bg-primary' : 'bg-border'}`}>
-                        <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform
-                          ${startupEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={startupEnabled}
+                        onClick={handleToggleStartup}
+                        className={`flex h-7 w-[52px] shrink-0 cursor-pointer items-center rounded-full p-0.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${startupEnabled ? 'justify-end bg-primary' : 'justify-start bg-border'}`}
+                      >
+                        <span className="pointer-events-none h-5 w-5 rounded-full bg-white shadow" />
                       </button>
                     </div>
                   </section>
@@ -251,9 +281,16 @@ export default function SettingsModal({ open, onClose }: Props) {
                               <input type="color" value={editColor} onChange={e => setEditColor(e.target.value)}
                                 className="w-10 h-9 rounded-lg border border-border cursor-pointer bg-transparent" />
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handlePickThemeImage(t.id)}
+                                className="px-3 py-1.5 rounded-lg border border-border text-xs text-muted hover:text-text hover:border-primary/40"
+                              >
+                                📷 Image (fichier)
+                              </button>
                               <button onClick={() => saveEditTheme(t.id)}
-                                className="flex-1 py-1.5 rounded-lg bg-primary hover:bg-primary/90 text-white text-xs font-semibold">
+                                className="flex-1 min-w-[8rem] py-1.5 rounded-lg bg-primary hover:bg-primary/90 text-white text-xs font-semibold">
                                 ✓ Enregistrer
                               </button>
                               <button onClick={() => setEditingThemeId(null)}
@@ -265,7 +302,9 @@ export default function SettingsModal({ open, onClose }: Props) {
                         ) : (
                           /* Mode affichage */
                           <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-bg border border-border group">
-                            <span className="text-lg w-7 text-center">{t.icon}</span>
+                            <span className="flex w-7 shrink-0 items-center justify-center text-lg">
+                              <ThemeGlyph theme={t} />
+                            </span>
                             <span className="flex-1 text-sm">{t.label}</span>
                             <span className="text-xs text-muted">{(t as any).count ?? 0} prompts</span>
                             <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: t.color }} />
@@ -304,6 +343,7 @@ export default function SettingsModal({ open, onClose }: Props) {
                         <input type="color" value={newThemeColor} onChange={e => setNewThemeColor(e.target.value)}
                           className="w-10 h-10 rounded-lg border border-border cursor-pointer bg-transparent" />
                       </div>
+                      <p className="text-xs text-muted">Après création, clique sur ✏️ puis « Image (fichier) » pour une photo à la place de l’emoji.</p>
                       <div className="flex gap-2">
                         <button onClick={handleAddTheme}
                           className="flex-1 py-2 rounded-lg bg-primary hover:bg-primary/90 text-white text-sm font-semibold transition-all">
@@ -322,15 +362,48 @@ export default function SettingsModal({ open, onClose }: Props) {
               {/* ─── Données ─────────────────────────────────────────────────── */}
               {tab === 'data' && (
                 <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => { window.vault.window.openImport(); onClose(); }}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-bg border border-border hover:border-primary/40 transition-colors text-left"
+                  >
+                    <span className="text-xl">📥</span>
+                    <div>
+                      <p className="text-sm">Importer des prompts</p>
+                      <p className="text-xs text-muted">Fichier JSON ou collage de texte — ouvre la fenêtre dédiée</p>
+                    </div>
+                  </button>
+                  {/* Prompts officiels masqués */}
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-semibold text-muted uppercase tracking-wider">Prompts officiels masqués ({suppressedBuiltins.length})</p>
+                    {suppressedBuiltins.length === 0 ? (
+                      <p className="text-xs text-muted px-1">Aucun prompt masqué</p>
+                    ) : (
+                      <div className="max-h-48 overflow-y-auto space-y-1">
+                        {suppressedBuiltins.map(p => (
+                          <div key={p.id} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-bg border border-border">
+                            <span className="flex-1 text-xs text-text truncate">{p.title}</span>
+                            <button onClick={() => handleRestoreSuppressed(p.id)}
+                              className="text-xs px-2 py-1 rounded-lg bg-primary/20 text-primary hover:bg-primary hover:text-white transition-colors flex-shrink-0">
+                              Démasquer
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Restaurer tous */}
                   <button onClick={async () => {
                     const r = await window.vault.themes.restore() as { restored: number };
                     refreshThemes();
+                    bumpPromptsVersion();
                     toast(`${r.restored} prompts officiels restaurés ✓`);
                   }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-bg border border-border hover:border-primary/40 transition-colors text-left">
                     <span className="text-xl">🔄</span>
                     <div>
-                      <p className="text-sm">Restaurer les prompts officiels</p>
-                      <p className="text-xs text-muted">Réimporter les 179 prompts pré-installés manquants</p>
+                      <p className="text-sm">Restaurer tous les prompts officiels</p>
+                      <p className="text-xs text-muted">Réimporter les prompts pré-installés manquants</p>
                     </div>
                   </button>
                   <button onClick={async () => {

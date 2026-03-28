@@ -124,7 +124,8 @@ export default function PromptList() {
               id="search-input" type="text" value={searchInput}
               onChange={e => setSearchInput(e.target.value)}
               placeholder="Rechercher… (titre, contenu, tags)"
-              className="flex-1 bg-surface border border-border rounded-lg px-3 py-2 text-sm text-text placeholder-muted focus:outline-none focus:border-primary"
+              className="flex-1 select-text bg-surface border border-border rounded-lg px-3 py-2 text-sm text-text placeholder-muted focus:outline-none focus:border-primary"
+              style={{ WebkitUserSelect: 'text', userSelect: 'text' } as React.CSSProperties}
             />
             <button onClick={() => setIsGrid(g => !g)} className="p-2 text-muted hover:text-text" title={isGrid ? 'Vue liste' : 'Vue grille'}>
               {isGrid ? '☰' : '⊞'}
@@ -135,7 +136,7 @@ export default function PromptList() {
           </div>
 
           <div className={`flex-1 overflow-y-auto p-4 ${isGrid ? 'grid grid-cols-2 xl:grid-cols-3 gap-3 content-start' : 'flex flex-col gap-2'}`}>
-            <AnimatePresence mode="popLayout">
+            <AnimatePresence mode="sync">
               {prompts.map(p => (
                 <PromptCard
                   key={p.id} prompt={p}

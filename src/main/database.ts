@@ -7,6 +7,7 @@ import path from 'path';
 import fs from 'fs';
 import { mapPrompt, RawPrompt, MappedPrompt } from './mapping';
 import crypto from 'crypto';
+import { pathToFileURL } from 'url';
 
 const dbPath = process.env.PORTABLE_EXECUTABLE_DIR
   ? path.join(process.env.PORTABLE_EXECUTABLE_DIR, 'vault.db')
@@ -75,6 +76,9 @@ export function initDatabase(): void {
   // Schema migration — add columns if missing (safe to run on every startup)
   try { db.exec(`ALTER TABLE prompts ADD COLUMN deleted INTEGER DEFAULT 0`); } catch {}
   try { db.exec(`ALTER TABLE prompts ADD COLUMN deleted_at TEXT`); } catch {}
+  try { db.exec(`ALTER TABLE prompts ADD COLUMN suppressed INTEGER DEFAULT 0`); } catch {}
+  try { db.exec(`ALTER TABLE themes ADD COLUMN icon_image TEXT`); } catch {}
+  try { db.exec(`ALTER TABLE themes ADD COLUMN sort_order INTEGER`); } catch {}
 
   const insertTheme = db.prepare(
     `INSERT OR IGNORE INTO themes (id, label, icon, color, is_custom) VALUES (?, ?, ?, ?, 0)`
@@ -136,7 +140,7 @@ export function getPrompts(filter: {
   query?: string; theme?: string; favorites?: boolean;
   type?: string; lang?: string; minRating?: number; sortBy?: string;
 }): unknown[] {
-  let sql = `SELECT * FROM prompts WHERE deleted = 0`;
+  let sql = `SELECT * FROM prompts WHERE deleted = 0 AND IFNULL(suppressed, 0) = 0`;
   const params: unknown[] = [];
 
   if (filter.theme)     { sql += ` AND theme = ?`;    params.push(filter.theme); }
@@ -174,7 +178,8 @@ function serializeArrayField(val: unknown): string {
 }
 
 export function createPrompt(data: Partial<MappedPrompt>): unknown {
-  const id = data.id ?? crypto.randomUUID();
+  // Ne jamais persister l'id placeholder du brouillon React (sinon conflit PK + favoris incohérents)
+  const id = data.id && data.id !== 'new' ? data.id : crypto.randomUUID();
   const now = new Date().toISOString();
   const body = data.body ?? '';
   const sha256 = crypto.createHash('sha256').update(body).digest('hex');
@@ -194,7 +199,7 @@ export function createPrompt(data: Partial<MappedPrompt>): unknown {
 
 export function updatePrompt(id: string, data: Partial<MappedPrompt>): unknown {
   const now = new Date().toISOString();
-  const allowed = ['title','body','theme','tags','target_ai','type','variables','rating','is_favorite','locked','lang'];
+  const allowed = ['title','body','theme','tags','target_ai','type','variables','rating','is_favorite','locked','lang','suppressed'];
   // Serialize any array fields before binding to SQLite
   const serialized: Record<string, unknown> = { ...data as Record<string, unknown> };
   for (const key of ['tags', 'target_ai', 'variables']) {
@@ -235,30 +240,56 @@ export function incrementUseCount(id: string): void {
 }
 
 export function getThemes(): unknown[] {
-  return db.prepare(`
+  const rows = db.prepare(`
     SELECT t.*, COUNT(p.id) as count
     FROM themes t
     LEFT JOIN prompts p ON p.theme = t.id
+      AND p.deleted = 0
+      AND IFNULL(p.suppressed, 0) = 0
     GROUP BY t.id
-    ORDER BY t.is_custom, t.label
-  `).all();
+    ORDER BY IFNULL(t.sort_order, 9999), t.is_custom, t.label
+  `).all() as Record<string, unknown>[];
+  return rows.map(row => ({
+    ...row,
+    icon_image: row.icon_image ? pathToFileURL(row.icon_image as string).href : null,
+  }));
 }
 
-export function createTheme(data: { id: string; label: string; icon?: string; color?: string }): unknown {
-  db.prepare(`INSERT INTO themes (id, label, icon, color, is_custom) VALUES (?, ?, ?, ?, 1)`)
-    .run(data.id, data.label, data.icon ?? '🗂️', data.color ?? '#6C63FF');
+export function reorderTheme(id: string, newOrder: number): void {
+  db.prepare(`UPDATE themes SET sort_order = ? WHERE id = ?`).run(newOrder, id);
+}
+
+export function getSuppressedBuiltins(): unknown[] {
+  return (db.prepare(`
+    SELECT * FROM prompts
+    WHERE deleted = 0 AND IFNULL(suppressed, 0) = 1 AND is_builtin = 1
+    ORDER BY title COLLATE NOCASE
+  `).all() as Record<string, unknown>[]).map(parseRow);
+}
+
+export function createTheme(data: { id: string; label: string; icon?: string; color?: string; icon_image?: string | null }): unknown {
+  db.prepare(`INSERT INTO themes (id, label, icon, color, is_custom, icon_image) VALUES (?, ?, ?, ?, 1, ?)`)
+    .run(data.id, data.label, data.icon ?? '🗂️', data.color ?? '#6C63FF', data.icon_image ?? null);
   return data;
 }
 
-export function updateTheme(id: string, data: { label?: string; icon?: string; color?: string }): unknown {
-  const fields = Object.keys(data).filter(k => ['label','icon','color'].includes(k)).map(k => `${k} = @${k}`).join(', ');
+export function updateTheme(id: string, data: { label?: string; icon?: string; color?: string; icon_image?: string | null }): unknown {
+  const fields = Object.keys(data).filter(k => ['label','icon','color','icon_image'].includes(k)).map(k => `${k} = @${k}`).join(', ');
   if (!fields) return;
   db.prepare(`UPDATE themes SET ${fields} WHERE id = @id AND is_custom = 1`).run({ ...data, id });
   return data;
 }
 
 export function deleteTheme(id: string): void {
+  const row = db.prepare(`SELECT icon_image FROM themes WHERE id = ? AND is_custom = 1`).get(id) as { icon_image?: string } | undefined;
+  if (row?.icon_image && fs.existsSync(row.icon_image)) {
+    try { fs.unlinkSync(row.icon_image); } catch { /* ignore */ }
+  }
   db.prepare(`DELETE FROM themes WHERE id = ? AND is_custom = 1`).run(id);
+}
+
+export function setThemeIconImage(themeId: string, destPath: string): void {
+  db.prepare(`UPDATE themes SET icon_image = ? WHERE id = ? AND is_custom = 1`).run(destPath, themeId);
 }
 
 export function importFromJson(filePath: string): { imported: number; perfectDuplicates: number; titleDuplicates: number; errors: string[] } {

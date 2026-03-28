@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import type { Prompt, Theme } from '../types';
 import { useToast } from './Toast';
+import ThemeGlyph from './ThemeGlyph';
 
 interface Props {
   prompt: Prompt;
@@ -25,9 +26,9 @@ export default function PromptCard({ prompt, theme, isSelected, isActive, onSele
 
   return (
     <motion.div
-      layout
-      initial={{ opacity: 0, scale: 0.97 }}
-      animate={{ opacity: 1, scale: 1 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.15 }}
       onHoverStart={() => setHovered(true)}
       onHoverEnd={() => setHovered(false)}
       onClick={() => onClick(prompt)}
@@ -53,7 +54,8 @@ export default function PromptCard({ prompt, theme, isSelected, isActive, onSele
         {theme && (
           <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full"
             style={{ backgroundColor: `${theme.color}20`, color: theme.color }}>
-            {theme.icon} {theme.label}
+            <ThemeGlyph theme={theme} className="!h-3.5 !w-3.5" />
+            {theme.label}
           </span>
         )}
         {prompt.is_builtin === 1 && (

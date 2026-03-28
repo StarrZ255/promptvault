@@ -1,6 +1,8 @@
 import { ipcMain, clipboard, dialog, BrowserWindow, app } from 'electron';
 import * as db from './database';
 import fs from 'fs';
+import path from 'path';
+import { pathToFileURL } from 'url';
 import type { ShortcutMap } from './shortcuts';
 
 export function registerHandlers(
@@ -24,6 +26,7 @@ export function registerHandlers(
   ipcMain.handle('prompts:restore',          (_, id) => db.restorePrompt(id));
   ipcMain.handle('prompts:permanentDelete',  (_, id) => db.permanentDeletePrompt(id));
   ipcMain.handle('prompts:emptyTrash',       () => db.emptyTrash());
+  ipcMain.handle('prompts:getSuppressedBuiltins', () => db.getSuppressedBuiltins());
 
   // ─── Thématiques ────────────────────────────────────────────────────────────
   ipcMain.handle('themes:getAll',   () => db.getThemes());
@@ -31,6 +34,22 @@ export function registerHandlers(
   ipcMain.handle('themes:update',   (_, id, data) => db.updateTheme(id, data));
   ipcMain.handle('themes:delete',   (_, id) => db.deleteTheme(id));
   ipcMain.handle('themes:restore',  () => db.restoreBuiltinPrompts());
+  ipcMain.handle('themes:reorder', (_, id, newOrder) => db.reorderTheme(id, newOrder));
+  ipcMain.handle('themes:saveIconImage', async (_, themeId: string) => {
+    const result = await dialog.showOpenDialog({
+      properties: ['openFile'],
+      filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif'] }],
+    });
+    if (result.canceled || !result.filePaths[0]) return null;
+    const src = result.filePaths[0];
+    const ext = path.extname(src) || '.png';
+    const dir = path.join(app.getPath('userData'), 'theme-icons');
+    fs.mkdirSync(dir, { recursive: true });
+    const dest = path.join(dir, `${themeId}${ext}`);
+    fs.copyFileSync(src, dest);
+    db.setThemeIconImage(themeId, dest);
+    return dest;
+  });
 
   // ─── Recherche ──────────────────────────────────────────────────────────────
   ipcMain.handle('search:query', (_, params) => db.getPrompts(params));
@@ -62,6 +81,10 @@ export function registerHandlers(
   });
   ipcMain.handle('system:copyToClipboard', (_, text: string) => {
     clipboard.writeText(text);
+  });
+  ipcMain.handle('system:pathToFileUrl', (_, filePath: string) => {
+    if (!filePath) return '';
+    return pathToFileURL(filePath).href;
   });
 
   // ─── Démarrage automatique ──────────────────────────────────────────────────

@@ -23,8 +23,11 @@ export default function Editor() {
   const handleToggleFavorite = async () => {
     if (!local) return;
     const newVal: 0 | 1 = local.is_favorite === 1 ? 0 : 1;
-    setLocal({ ...local, is_favorite: newVal });
-    if (!isNew) {
+    const next = { ...local, is_favorite: newVal };
+    setLocal(next);
+    if (isNew) {
+      setSelectedPrompt(next);
+    } else {
       await window.vault.prompts.update(local.id, { is_favorite: newVal });
       bumpPromptsVersion();
     }
@@ -32,6 +35,9 @@ export default function Editor() {
 
   const handleSave = async () => {
     if (!local) return;
+    // #region agent log
+    fetch('http://127.0.0.1:7445/ingest/34a31d9d-5b6e-4ce6-ae07-12e5e06f1d18', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '3e6107' }, body: JSON.stringify({ sessionId: '3e6107', location: 'Editor.tsx:handleSave', message: 'save clicked', data: { isNew: local?.id === 'new' }, timestamp: Date.now(), hypothesisId: 'H5' }) }).catch(() => {});
+    // #endregion
     setSaving(true);
     try {
       const data: Partial<Prompt> = {
@@ -39,7 +45,13 @@ export default function Editor() {
         tags: local.tags, rating: local.rating, is_favorite: local.is_favorite,
       };
       if (isNew) {
-        const created = await window.vault.prompts.create(local) as Prompt;
+        const created = await window.vault.prompts.create({
+          ...data,
+          target_ai: local.target_ai,
+          type: local.type,
+          variables: local.variables,
+          lang: local.lang,
+        }) as Prompt;
         setSelectedPrompt(created);
         toast('Prompt créé ✓');
       } else {
@@ -63,10 +75,23 @@ export default function Editor() {
 
   const handleDelete = async () => {
     if (!local || isNew) return;
-    if (!window.confirm('Supprimer ce prompt ? Cette action est irréversible.')) return;
+    const msg = local.is_builtin === 1
+      ? 'Envoyer ce prompt officiel à la corbeille ? Tu pourras le restaurer depuis la corbeille ou réimporter les officiels dans Paramètres.'
+      : 'Envoyer ce prompt à la corbeille ?';
+    if (!window.confirm(msg)) return;
     await window.vault.prompts.delete(local.id);
     setSelectedPrompt(null);
     toast('Prompt supprimé');
+    refreshThemes();
+    bumpPromptsVersion();
+  };
+
+  const handleSuppressBuiltin = async () => {
+    if (!local || isNew || local.is_builtin !== 1) return;
+    if (!window.confirm('Masquer ce prompt officiel de la bibliothèque ? Il restera récupérable dans Paramètres → Données → Officiels masqués.')) return;
+    await window.vault.prompts.update(local.id, { suppressed: 1 });
+    setSelectedPrompt(null);
+    toast('Prompt masqué — réaffiche-le depuis Paramètres → Données');
     refreshThemes();
     bumpPromptsVersion();
   };
@@ -75,8 +100,8 @@ export default function Editor() {
 
   return (
     <motion.aside
-      initial={{ x: 400, opacity: 0 }} animate={{ x: 0, opacity: 1 }}
-      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+      initial={{ x: 24, opacity: 0 }} animate={{ x: 0, opacity: 1 }}
+      transition={{ type: 'tween', duration: 0.2, ease: 'easeOut' }}
       className="w-96 flex-shrink-0 h-full flex flex-col border-l border-border bg-surface overflow-y-auto"
     >
       {/* Header */}
@@ -86,7 +111,7 @@ export default function Editor() {
           <button onClick={handleToggleFavorite}
             className={`p-1.5 rounded hover:bg-white/5 text-lg ${local.is_favorite === 1 ? 'text-yellow-400' : 'text-muted'}`}>⭐</button>
           {!isNew && <button onClick={handleDuplicate} className="p-1.5 rounded hover:bg-white/5 text-muted text-lg" title="Dupliquer">⎘</button>}
-          {!isNew && local.locked === 0 && local.is_builtin === 0 && <button onClick={handleDelete} className="p-1.5 rounded hover:bg-white/5 text-red-400 text-lg">🗑</button>}
+          {!isNew && local.locked === 0 && <button onClick={handleDelete} className="p-1.5 rounded hover:bg-white/5 text-red-400 text-lg" title="Corbeille">🗑</button>}
           <button onClick={() => setSelectedPrompt(null)} className="p-1.5 rounded hover:bg-white/5 text-muted">✕</button>
         </div>
       </div>
@@ -98,7 +123,7 @@ export default function Editor() {
           <label className="text-xs text-muted uppercase tracking-wider mb-1 block">Titre</label>
           <input type="text" value={local.title} onChange={e => update('title', e.target.value)}
             autoFocus={isNew} placeholder="Nom du prompt"
-            className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary" />
+            className="w-full select-text bg-bg border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary" />
         </div>
 
         {/* Contenu */}
@@ -106,14 +131,19 @@ export default function Editor() {
           <label className="text-xs text-muted uppercase tracking-wider mb-1 block">Contenu</label>
           <textarea value={local.body} onChange={e => update('body', e.target.value)} rows={10}
             placeholder="Écris ton prompt ici…"
-            className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary resize-none font-mono leading-relaxed" />
+            onFocus={() => {
+              // #region agent log
+              fetch('http://127.0.0.1:7445/ingest/34a31d9d-5b6e-4ce6-ae07-12e5e06f1d18', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '3e6107' }, body: JSON.stringify({ sessionId: '3e6107', location: 'Editor.tsx:body-textarea', message: 'textarea focus', data: {}, timestamp: Date.now(), hypothesisId: 'H-text' }) }).catch(() => {});
+              // #endregion
+            }}
+            className="w-full select-text bg-bg border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary resize-none font-mono leading-relaxed" />
         </div>
 
         {/* Thématique */}
         <div>
           <label className="text-xs text-muted uppercase tracking-wider mb-1 block">Thématique</label>
           <select value={local.theme} onChange={e => update('theme', e.target.value)}
-            className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary">
+            className="w-full select-text bg-bg border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary">
             {themes.map(t => <option key={t.id} value={t.id}>{t.icon} {t.label}</option>)}
           </select>
         </div>
@@ -138,7 +168,7 @@ export default function Editor() {
             value={Array.isArray(local.tags) ? local.tags.join(', ') : ''}
             onChange={e => update('tags', e.target.value.split(',').map(t => t.trim()).filter(Boolean))}
             placeholder="ex: python, automatisation, débutant…"
-            className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary" />
+            className="w-full select-text bg-bg border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary" />
           <p className="text-xs text-muted/60 mt-1">Sépare par des virgules. Ex : si thème = Code, ajoute « react, api, tests »</p>
         </div>
 
@@ -148,10 +178,19 @@ export default function Editor() {
             <div>Utilisé {local.use_count} fois</div>
             <div>Modifié le {new Date(local.updated_at).toLocaleDateString('fr-FR')}</div>
             {local.is_builtin === 1 && (
-              <div className="flex items-center gap-2 p-3 rounded-xl bg-primary/10 border border-primary/20 text-xs text-primary">
-                <span>⚙️</span>
-                <span>Prompt officiel — modifiable mais ne peut pas être supprimé</span>
-              </div>
+              <>
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-primary/10 border border-primary/20 text-xs text-primary">
+                  <span>⚙️</span>
+                  <span>Prompt officiel — masque-le de la liste, envoie-le à la corbeille, ou réimporte les manquants depuis Paramètres → Données.</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSuppressBuiltin}
+                  className="w-full py-2 rounded-lg border border-border text-xs text-text hover:bg-white/5"
+                >
+                  Masquer de la bibliothèque (sans corbeille)
+                </button>
+              </>
             )}
             {local.locked === 1 && <div className="text-yellow-400">🔒 Verrouillé</div>}
           </div>
