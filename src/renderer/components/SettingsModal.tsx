@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../App';
-import type { Theme, Prompt } from '../types';
+import type { Theme, Prompt, SuppressedPrompt } from '../types';
 import { useToast } from './Toast';
 import ThemeGlyph from './ThemeGlyph';
 import { locales, type Language } from '../i18n/locales';
@@ -20,7 +20,7 @@ interface Props { open: boolean; onClose: () => void; }
 export default function SettingsModal({ open, onClose }: Props) {
   const { themes, refreshThemes, promptsVersion, bumpPromptsVersion, t, language, setLanguage } = useApp();
   const { toast } = useToast();
-  const [tab, setTab] = useState<'general' | 'themes' | 'data' | 'shortcuts'>('general');
+  const [tab, setTab] = useState<'general' | 'themes' | 'data' | 'shortcuts' | 'hidden'>('general');
 
   // Theme editing
   const [editingTheme, setEditingTheme] = useState<Theme | null>(null);
@@ -36,14 +36,28 @@ export default function SettingsModal({ open, onClose }: Props) {
   const [shortcuts, setShortcuts] = useState<{ toggleMini: string; quickCapture: string; focusSearch: string; openMain: string } | null>(null);
   const [recordingKey, setRecordingKey] = useState<string | null>(null);
 
-  const [suppressedBuiltins, setSuppressedBuiltins] = useState<Prompt[]>([]);
-  const [showSuppressedFolder, setShowSuppressedFolder] = useState(false);
-  const [deletingBuiltins, setDeletingBuiltins] = useState(false);
+  const [suppressedPrompts, setSuppressedPrompts] = useState<SuppressedPrompt[]>([]);
+  const [openAccordions, setOpenAccordions] = useState<Set<string>>(new Set());
+  const [showBuiltinsDialog, setShowBuiltinsDialog] = useState(false);
 
   useEffect(() => {
-    window.vault.prompts.getSuppressedBuiltins().then(r => setSuppressedBuiltins(r as Prompt[]));
+    window.vault.prompts.getSuppressed().then(r => setSuppressedPrompts(r as SuppressedPrompt[]));
     window.vault.shortcuts.get().then(s => setShortcuts(s));
   }, [open, promptsVersion]);
+
+  const groupedByTheme = useMemo(() => {
+    const acc: Record<string, { label: string; icon: string; color: string; prompts: SuppressedPrompt[] }> = {};
+    for (const p of suppressedPrompts) {
+      if (!acc[p.theme]) acc[p.theme] = { label: p.theme_label, icon: p.theme_icon, color: p.theme_color, prompts: [] };
+      acc[p.theme].prompts.push(p);
+    }
+    return acc;
+  }, [suppressedPrompts]);
+
+  const themeGroups = Object.entries(groupedByTheme);
+
+  const toggleAccordion = (themeId: string) =>
+    setOpenAccordions(s => { const n = new Set(s); n.has(themeId) ? n.delete(themeId) : n.add(themeId); return n; });
 
   const handleRecordShortcut = (key: string) => {
     setRecordingKey(key);
@@ -125,23 +139,37 @@ export default function SettingsModal({ open, onClose }: Props) {
     toast(t('toasts.theme_created'));
   };
 
-  const handleRestoreSuppressed = async (id: string) => {
-    await window.vault.prompts.update(id, { suppressed: 0 });
+  const handleRestoreHidden = async (id: string) => {
+    await window.vault.prompts.restoreHidden(id);
+    setSuppressedPrompts(p => p.filter(x => x.id !== id));
     bumpPromptsVersion();
-    toast(t('toasts.prompt_saved'));
+    refreshThemes();
+    toast(t('toasts.prompt_unmasked'));
   };
 
-  const handleDeleteBuiltins = async () => {
-    if (!window.confirm(t('actions.confirm_delete_builtins'))) return;
-    setDeletingBuiltins(true);
-    try {
+  const handleRestoreAllInTheme = async (themeId: string) => {
+    const ids = groupedByTheme[themeId]?.prompts.map(p => p.id) ?? [];
+    await Promise.all(ids.map(id => window.vault.prompts.restoreHidden(id)));
+    setSuppressedPrompts(p => p.filter(x => x.theme !== themeId));
+    bumpPromptsVersion();
+    refreshThemes();
+    toast(t('actions.restore_all'));
+  };
+
+  const handleBuiltinsChoice = async (mode: 'hide' | 'delete') => {
+    setShowBuiltinsDialog(false);
+    if (mode === 'hide') {
+      await window.vault.prompts.suppressBuiltins();
+      bumpPromptsVersion();
+      refreshThemes();
+      const r = await window.vault.prompts.getSuppressed();
+      setSuppressedPrompts(r as SuppressedPrompt[]);
+      toast(t('toasts.builtins_hidden'));
+    } else {
       await window.vault.prompts.deleteBuiltins();
       bumpPromptsVersion();
+      refreshThemes();
       toast(t('toasts.builtins_deleted'));
-    } catch (e) {
-      toast(`Error: ${String(e)}`);
-    } finally {
-      setDeletingBuiltins(false);
     }
   };
 
@@ -199,6 +227,15 @@ export default function SettingsModal({ open, onClose }: Props) {
             <button onClick={() => setTab('data')}
               className={`w-full text-left px-4 py-2.5 rounded-xl text-sm transition-all ${tab === 'data' ? 'bg-primary text-white shadow-lg shadow-primary/20 font-bold' : 'text-muted hover:bg-white/5'}`}>
               📦 {t('settings.general').toUpperCase() === 'GENERAL' ? 'Data' : 'Données'}
+            </button>
+            <button onClick={() => setTab('hidden')}
+              className={`w-full text-left px-4 py-2.5 rounded-xl text-sm transition-all flex items-center justify-between ${tab === 'hidden' ? 'bg-primary text-white shadow-lg shadow-primary/20 font-bold' : 'text-muted hover:bg-white/5'}`}>
+              <span>🙈 {t('settings.hidden_tab')}</span>
+              {suppressedPrompts.length > 0 && (
+                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${tab === 'hidden' ? 'bg-white/20' : 'bg-primary/20 text-primary'}`}>
+                  {suppressedPrompts.length}
+                </span>
+              )}
             </button>
           </div>
 
@@ -320,19 +357,94 @@ export default function SettingsModal({ open, onClose }: Props) {
                         <p className="text-xs text-muted">Backup all your prompts to a local file</p>
                       </div>
                     </button>
-                    <button 
-                      onClick={handleDeleteBuiltins}
-                      disabled={deletingBuiltins}
-                      className="w-full flex items-center gap-4 p-4 rounded-2xl border border-border hover:border-red-500/40 bg-surface/50 group transition-all text-left disabled:opacity-50"
-                    >
-                      <span className="text-2xl group-hover:scale-110 transition-transform">🗑️</span>
-                      <div>
-                        <p className="text-sm font-bold text-red-400">{t('settings.delete_builtins_label')}</p>
-                        <p className="text-xs text-muted">{t('settings.delete_builtins_desc')}</p>
-                      </div>
-                    </button>
+                    <div className="mt-1">
+                      <button
+                        onClick={() => setShowBuiltinsDialog(v => !v)}
+                        className="w-full flex items-center gap-4 p-4 rounded-2xl border border-border hover:border-red-500/40 bg-surface/50 group transition-all text-left">
+                        <span className="text-2xl group-hover:scale-110 transition-transform">🗑️</span>
+                        <div>
+                          <p className="text-sm font-bold">{t('actions.manage_builtins')}</p>
+                          <p className="text-xs text-muted">{t('actions.confirm_hide_builtins')}</p>
+                        </div>
+                      </button>
+                      {showBuiltinsDialog && (
+                        <div className="mt-3 p-4 rounded-2xl border border-amber-500/30 bg-amber-500/5 space-y-3 animate-in fade-in zoom-in duration-150">
+                          <p className="text-sm font-bold text-text">{t('actions.confirm_hide_builtins')}</p>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleBuiltinsChoice('hide')}
+                              className="flex-1 py-2 rounded-xl bg-amber-500 text-white text-xs font-bold hover:bg-amber-600 transition-all">
+                              🙈 {t('actions.hide_builtins')}
+                            </button>
+                            <button
+                              onClick={() => handleBuiltinsChoice('delete')}
+                              className="flex-1 py-2 rounded-xl bg-red-500 text-white text-xs font-bold hover:bg-red-600 transition-all">
+                              🗑 {t('actions.delete_builtins_confirm')}
+                            </button>
+                            <button
+                              onClick={() => setShowBuiltinsDialog(false)}
+                              className="px-3 py-2 rounded-xl border border-border text-xs text-muted hover:bg-white/5 transition-all">
+                              ✕
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {tab === 'hidden' && (
+              <div className="space-y-3">
+                <h3 className="text-sm font-bold uppercase tracking-widest text-muted mb-4">{t('settings.hidden_tab')}</h3>
+                {themeGroups.length === 0 && (
+                  <div className="flex flex-col items-center justify-center h-32 text-muted opacity-30">
+                    <span className="text-3xl mb-2">🙈</span>
+                    <p className="text-xs font-bold uppercase tracking-widest">{t('settings.hidden_empty')}</p>
+                  </div>
+                )}
+                {themeGroups.map(([themeId, group]) => (
+                  <div key={themeId} className="rounded-2xl border border-border overflow-hidden">
+                    <button
+                      onClick={() => toggleAccordion(themeId)}
+                      className="w-full flex items-center gap-3 px-4 py-3 bg-bg hover:bg-white/5 transition-colors text-left">
+                      <span style={{ color: group.color }}>{group.icon}</span>
+                      <span className="flex-1 text-sm font-bold text-text">{group.label}</span>
+                      <span className="text-[10px] font-black text-muted bg-surface px-2 py-0.5 rounded-full">
+                        {group.prompts.length}
+                      </span>
+                      <button
+                        onClick={e => { e.stopPropagation(); handleRestoreAllInTheme(themeId); }}
+                        className="text-[10px] font-bold px-2 py-1 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors mr-1">
+                        {t('actions.restore_all')}
+                      </button>
+                      <span className="text-muted text-xs transition-transform duration-200"
+                        style={{ transform: openAccordions.has(themeId) ? 'rotate(180deg)' : 'none' }}>
+                        ▾
+                      </span>
+                    </button>
+                    {openAccordions.has(themeId) && (
+                      <div className="divide-y divide-border/50 animate-in fade-in slide-in-from-top-2 duration-150">
+                        {group.prompts.map(p => (
+                          <div key={p.id} className="flex items-center gap-3 px-4 py-2.5 bg-surface/30">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-text truncate">{p.title}</p>
+                              <p className="text-[11px] text-muted truncate mt-0.5 opacity-60">
+                                {p.body.slice(0, 60)}{p.body.length > 60 ? '…' : ''}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => handleRestoreHidden(p.id)}
+                              className="flex-shrink-0 text-[10px] font-bold px-3 py-1.5 rounded-lg bg-primary/20 text-primary hover:bg-primary hover:text-white transition-colors">
+                              {t('actions.restore_hidden')}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
 

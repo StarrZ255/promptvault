@@ -52,6 +52,12 @@ export interface ImportReport {
   errors: string[];
 }
 
+export type SuppressedPrompt = Prompt & {
+  theme_label: string;
+  theme_icon: string;
+  theme_color: string;
+};
+
 export interface PartialPrompt {
   title: string;
   body: string;
@@ -73,8 +79,12 @@ export interface VaultAPI {
     restore: (id: string) => Promise<void>;
     permanentDelete: (id: string) => Promise<void>;
     emptyTrash: () => Promise<{ deleted: number }>;
-    deleteBuiltins: () => Promise<void>;
     getSuppressedBuiltins: () => Promise<Prompt[]>;
+    getSuppressed: () => Promise<SuppressedPrompt[]>;
+    hideBatch: (ids: string[]) => Promise<{ hidden: number }>;
+    restoreHidden: (id: string) => Promise<void>;
+    suppressBuiltins: () => Promise<{ hidden: number }>;
+    deleteBuiltins: () => Promise<void>;
   };
   themes: {
     getAll: () => Promise<Theme[]>;

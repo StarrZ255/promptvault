@@ -277,12 +277,46 @@ export function reorderTheme(id: string, newOrder: number): void {
   db.prepare(`UPDATE themes SET sort_order = ? WHERE id = ?`).run(newOrder, id);
 }
 
-export function getSuppressedBuiltins(): unknown[] {
+export function getSuppressedPrompts(): unknown[] {
   return (db.prepare(`
-    SELECT * FROM prompts
-    WHERE deleted = 0 AND IFNULL(suppressed, 0) = 1 AND is_builtin = 1
-    ORDER BY title COLLATE NOCASE
+    SELECT p.*, IFNULL(t.label, p.theme) as theme_label,
+           IFNULL(t.icon, '🗂️') as theme_icon,
+           IFNULL(t.color, '#6B7280') as theme_color
+    FROM prompts p
+    LEFT JOIN themes t ON t.id = p.theme
+    WHERE p.deleted = 0 AND IFNULL(p.suppressed, 0) = 1
+    ORDER BY p.theme, p.title COLLATE NOCASE
   `).all() as Record<string, unknown>[]).map(parseRow);
+}
+
+// Alias backward compat
+export const getSuppressedBuiltins = getSuppressedPrompts;
+
+export function hideBatchPrompts(ids: string[]): { hidden: number } {
+  if (!ids.length) return { hidden: 0 };
+  const placeholders = ids.map(() => '?').join(',');
+  const result = db.prepare(
+    `UPDATE prompts SET suppressed = 1 WHERE id IN (${placeholders}) AND locked = 0`
+  ).run(...ids);
+  return { hidden: result.changes };
+}
+
+export function restoreHiddenPrompt(id: string): void {
+  db.prepare(`UPDATE prompts SET suppressed = 0 WHERE id = ?`).run(id);
+}
+
+export function suppressBuiltinPrompts(): { hidden: number } {
+  const result = db.prepare(
+    `UPDATE prompts SET suppressed = 1 WHERE is_builtin = 1 AND locked = 0 AND deleted = 0`
+  ).run();
+  return { hidden: result.changes };
+}
+
+export function deleteBuiltinPrompts(): { deleted: number } {
+  const result = db.prepare(
+    `UPDATE prompts SET deleted = 1, deleted_at = ? WHERE is_builtin = 1 AND locked = 0`
+  ).run(new Date().toISOString());
+  return { deleted: result.changes };
 }
 
 export function createTheme(data: { id: string; label: string; icon?: string; color?: string; icon_image?: string | null }): unknown {

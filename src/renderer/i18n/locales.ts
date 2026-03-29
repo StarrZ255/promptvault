@@ -32,7 +32,16 @@ export const locales = {
       cancel: "Annuler",
       minimize: "Réduire",
       maximize: "Agrandir",
-      close: "Fermer"
+      close: "Fermer",
+      hide: "MASQUER",
+      restore_hidden: "Restaurer",
+      restore_all: "Tout restaurer",
+      select_all: "Tout sélectionner",
+      deselect_all: "Désélectionner",
+      confirm_hide_builtins: "Masquer ou supprimer les prompts par défaut ?",
+      hide_builtins: "Masquer (recommandé)",
+      delete_builtins_confirm: "Supprimer définitivement",
+      manage_builtins: "Gérer les prompts par défaut"
     },
     placeholders: {
       empty_body: "Le corps du prompt est vide...",
@@ -66,7 +75,9 @@ export const locales = {
       delete_builtins_label: "Supprimer les prompts par défaut",
       delete_builtins_desc: "Retire définitivement tous les prompts pré-installés",
       general: "Général",
-      close: "Fermer"
+      close: "Fermer",
+      hidden_tab: "Masqués",
+      hidden_empty: "Aucun prompt masqué"
     },
     toasts: {
       theme_created: "Thématique créée ✓",
@@ -76,8 +87,11 @@ export const locales = {
       prompt_restored: "Prompt restauré ✓",
       trash_emptied: "Corbeille vidée",
       perm_deleted: "Supprimé définitivement",
-      builtins_deleted: "Prompts par défaut supprimés ✓",
-      exported: "Exporté vers {{path}}"
+      exported: "Exporté vers {{path}}",
+      prompts_hidden: "{{count}} prompt(s) masqué(s) ✓",
+      prompt_unmasked: "Prompt restauré ✓",
+      builtins_hidden: "Prompts par défaut masqués ✓",
+      builtins_deleted: "Prompts par défaut supprimés ✓"
     },
     editor: {
       title_label: "Titre du prompt",
@@ -141,7 +155,16 @@ export const locales = {
       cancel: "Cancel",
       minimize: "Minimize",
       maximize: "Maximize",
-      close: "Close"
+      close: "Close",
+      hide: "HIDE",
+      restore_hidden: "Restore",
+      restore_all: "Restore all",
+      select_all: "Select all",
+      deselect_all: "Deselect",
+      confirm_hide_builtins: "Hide or delete default prompts?",
+      hide_builtins: "Hide (recommended)",
+      delete_builtins_confirm: "Delete permanently",
+      manage_builtins: "Manage default prompts"
     },
     placeholders: {
       empty_body: "The prompt body is empty...",
@@ -175,7 +198,9 @@ export const locales = {
       delete_builtins_label: "Delete built-in prompts",
       delete_builtins_desc: "Permanently remove all pre-installed prompts",
       general: "General",
-      close: "Close"
+      close: "Close",
+      hidden_tab: "Hidden",
+      hidden_empty: "No hidden prompts"
     },
     toasts: {
       theme_created: "Category created ✓",
@@ -185,8 +210,11 @@ export const locales = {
       prompt_restored: "Prompt restored ✓",
       trash_emptied: "Trash emptied",
       perm_deleted: "Permanently deleted",
-      builtins_deleted: "Built-in prompts deleted ✓",
-      exported: "Exported to {{path}}"
+      exported: "Exported to {{path}}",
+      prompts_hidden: "{{count}} prompt(s) hidden ✓",
+      prompt_unmasked: "Prompt restored ✓",
+      builtins_hidden: "Default prompts hidden ✓",
+      builtins_deleted: "Built-in prompts deleted ✓"
     },
     editor: {
       title_label: "Prompt Title",

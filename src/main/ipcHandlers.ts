@@ -27,8 +27,12 @@ export function registerHandlers(
   ipcMain.handle('prompts:restore',          (_, id) => db.restorePrompt(id));
   ipcMain.handle('prompts:permanentDelete',  (_, id) => db.permanentDeletePrompt(id));
   ipcMain.handle('prompts:emptyTrash',       () => db.emptyTrash());
-  ipcMain.handle('prompts:deleteBuiltins',   () => db.deleteBuiltinPrompts());
-  ipcMain.handle('prompts:getSuppressedBuiltins', () => db.getSuppressedBuiltins());
+  ipcMain.handle('prompts:getSuppressedBuiltins', () => db.getSuppressedPrompts());
+  ipcMain.handle('prompts:getSuppressed',         () => db.getSuppressedPrompts());
+  ipcMain.handle('prompts:hideBatch',             (_, ids) => db.hideBatchPrompts(ids));
+  ipcMain.handle('prompts:restoreHidden',         (_, id) => db.restoreHiddenPrompt(id));
+  ipcMain.handle('prompts:suppressBuiltins',      () => db.suppressBuiltinPrompts());
+  ipcMain.handle('prompts:deleteBuiltins',        () => db.deleteBuiltinPrompts());
 
   // ─── Thématiques ────────────────────────────────────────────────────────────
   ipcMain.handle('themes:getAll',   () => db.getThemes());

@@ -59,6 +59,15 @@ export default function PromptList() {
     refreshThemes();
   };
 
+  const handleHideSelected = async () => {
+    const result = await window.vault.prompts.hideBatch(Array.from(selected)) as { hidden: number };
+    toast(t('toasts.prompts_hidden', { count: String(result.hidden) }));
+    clear();
+    refresh();
+    refreshThemes();
+    bumpPromptsVersion();
+  };
+
   const handleNewPrompt = () => {
     const blank: Prompt = {
       id: 'new', title: '', body: '', theme: 'autre', tags: [], target_ai: [],
@@ -128,6 +137,14 @@ export default function PromptList() {
             <button onClick={() => setIsGrid(g => !g)} className="p-2.5 rounded-xl hover:bg-white/5 text-muted hover:text-text transition-all" title={isGrid ? 'Vue liste' : 'Vue grille'}>
               {isGrid ? '☰' : '⊞'}
             </button>
+            {prompts.length > 0 && (
+              <button
+                onClick={() => count === prompts.length ? clear() : selectAll()}
+                className="px-4 py-2.5 border border-border text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-white/5 transition-all text-muted hover:text-text"
+              >
+                {count === prompts.length ? t('actions.deselect_all') : t('actions.select_all')}
+              </button>
+            )}
             <button onClick={handleNewPrompt} className="px-5 py-2.5 bg-primary text-white text-xs font-black uppercase tracking-widest rounded-2xl hover:bg-primary/80 transition-all shadow-xl shadow-primary/20 active:scale-95">
               {t('actions.new_prompt')}
             </button>
@@ -159,6 +176,7 @@ export default function PromptList() {
               </span>
               <div className="w-px h-6 bg-border/40" />
               <div className="flex gap-3">
+                <button onClick={handleHideSelected} className="px-5 py-2.5 bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/20">{t('actions.hide')}</button>
                 <button onClick={handleDeleteSelected} className="px-5 py-2.5 bg-red-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-red-600 transition-all shadow-lg shadow-red-500/20">{t('actions.delete')}</button>
                 <button onClick={clear} className="px-5 py-2.5 border border-border text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-white/5 transition-all">{t('actions.cancel')}</button>
               </div>
