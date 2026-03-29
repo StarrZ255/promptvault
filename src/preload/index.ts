@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('vault', {
     update:            (id: string, data: unknown)    => invoke('prompts:update', id, data),
     delete:            (id: string)                   => invoke('prompts:delete', id),
     deleteBatch:       (ids: string[])                => invoke('prompts:deleteBatch', ids),
+    moveBatch:         (ids: string[], themeId: string) => invoke('prompts:moveBatch', ids, themeId),
     duplicate:         (id: string)                   => invoke('prompts:duplicate', id),
     incrementUseCount: (id: string)                   => invoke('prompts:incrementUseCount', id),
     getDeleted:        ()           => invoke('prompts:getDeleted'),
@@ -35,8 +36,9 @@ contextBridge.exposeInMainWorld('vault', {
     reorder: (id: string, order: number) => invoke('themes:reorder', id, order),
   },
   import: {
-    fromJson:  (filePath: string) => invoke('import:fromJson', filePath),
-    fromPaste: (content: string)  => invoke('import:fromPaste', content),
+    fromJson:  (filePath: string)   => invoke('import:fromJson', filePath),
+    fromPaste: (content: string)    => invoke('import:fromPaste', content),
+    library:   (jsonString: string) => invoke('import:library', jsonString),
   },
   export: {
     toJson: (ids?: string[]) => invoke('export:toJson', ids),
@@ -47,7 +49,8 @@ contextBridge.exposeInMainWorld('vault', {
   system: {
     openFileDialog:  (opts: unknown)  => invoke('system:openFileDialog', opts),
     saveFileDialog:  (opts: unknown)  => invoke('system:saveFileDialog', opts),
-    copyToClipboard: (text: string)   => invoke('system:copyToClipboard', text),
+    readFile:        (filePath: string) => invoke('system:readFile', filePath),
+    copyToClipboard: (text: string)    => invoke('system:copyToClipboard', text),
     pathToFileUrl: (filePath: string)  => invoke('system:pathToFileUrl', filePath) as Promise<string>,
   },
   shortcuts: {

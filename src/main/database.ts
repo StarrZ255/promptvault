@@ -292,6 +292,15 @@ export function getSuppressedPrompts(): unknown[] {
 // Alias backward compat
 export const getSuppressedBuiltins = getSuppressedPrompts;
 
+export function moveBatchPrompts(ids: string[], themeId: string): { moved: number } {
+  if (!ids.length) return { moved: 0 };
+  const placeholders = ids.map(() => '?').join(',');
+  const result = db.prepare(
+    `UPDATE prompts SET theme = ? WHERE id IN (${placeholders}) AND locked = 0`
+  ).run(themeId, ...ids);
+  return { moved: result.changes };
+}
+
 export function hideBatchPrompts(ids: string[]): { hidden: number } {
   if (!ids.length) return { hidden: 0 };
   const placeholders = ids.map(() => '?').join(',');
@@ -333,11 +342,13 @@ export function updateTheme(id: string, data: { label?: string; icon?: string; c
 }
 
 export function deleteTheme(id: string): void {
-  const row = db.prepare(`SELECT icon_image FROM themes WHERE id = ? AND is_custom = 1`).get(id) as { icon_image?: string } | undefined;
+  if (id === 'autre') return; // fallback protégé
+  const row = db.prepare(`SELECT icon_image FROM themes WHERE id = ?`).get(id) as { icon_image?: string } | undefined;
   if (row?.icon_image && fs.existsSync(row.icon_image)) {
     try { fs.unlinkSync(row.icon_image); } catch { /* ignore */ }
   }
-  db.prepare(`DELETE FROM themes WHERE id = ? AND is_custom = 1`).run(id);
+  db.prepare(`UPDATE prompts SET theme = 'autre' WHERE theme = ?`).run(id);
+  db.prepare(`DELETE FROM themes WHERE id = ?`).run(id);
 }
 
 export function setThemeIconImage(themeId: string, destPath: string): void {
@@ -385,6 +396,63 @@ export function importFromJson(filePath: string): { imported: number; perfectDup
   return { imported, perfectDuplicates, titleDuplicates, errors };
 }
 
+export function importPromptLibrary(
+  data: unknown[]
+): { imported: number; skipped: number } {
+  if (!Array.isArray(data) || data.length === 0) return { imported: 0, skipped: 0 };
+
+  let imported = 0, skipped = 0;
+  const checkSha    = db.prepare(`SELECT id FROM prompts WHERE sha256 = ? AND deleted = 0`);
+  const insertTheme = db.prepare(`INSERT OR IGNORE INTO themes (id, label, icon, color, is_custom) VALUES (?, ?, ?, ?, 1)`);
+  const now = new Date().toISOString();
+
+  // Detect format: library ([{ theme, prompts }]) vs flat ([{ title, body, ... }])
+  const first = data[0] as Record<string, unknown>;
+  const isLibrary = Array.isArray(first.prompts);
+
+  const doImport = db.transaction(() => {
+    type Entry = { themeId?: string; prompt: Record<string, unknown> };
+    const entries: Entry[] = [];
+
+    if (isLibrary) {
+      for (const entry of data as Array<{ theme?: { id: string; label: string; icon?: string; color?: string }; prompts: Record<string, unknown>[] }>) {
+        if (entry.theme) {
+          insertTheme.run(entry.theme.id, entry.theme.label, entry.theme.icon ?? '🗂️', entry.theme.color ?? '#6C63FF');
+        }
+        for (const p of (entry.prompts ?? [])) entries.push({ themeId: entry.theme?.id, prompt: p });
+      }
+    } else {
+      for (const p of data as Record<string, unknown>[]) entries.push({ prompt: p });
+    }
+
+    const insertStmt = db.prepare(INSERT_PROMPT_SQL);
+    for (const { themeId, prompt } of entries) {
+      const body = String(prompt.body ?? prompt.content ?? '');
+      const sha256 = crypto.createHash('sha256').update(body).digest('hex');
+      if (checkSha.get(sha256)) { skipped++; continue; }
+      const row = {
+        id: crypto.randomUUID(),
+        title: String(prompt.title ?? 'Sans titre'),
+        body,
+        theme: String(themeId ?? prompt.theme ?? 'autre'),
+        tags:      serializeArrayField(prompt.tags),
+        target_ai: serializeArrayField(prompt.target_ai),
+        type:      String(prompt.type ?? 'task'),
+        variables: serializeArrayField(prompt.variables),
+        rating: Number(prompt.rating ?? 0),
+        is_favorite: 0, is_builtin: 0, locked: 0,
+        lang: String(prompt.lang ?? 'fr'),
+        use_count: 0, sha256,
+        created_at: now, updated_at: now,
+      };
+      if (insertStmt.run(row).changes > 0) imported++;
+    }
+  });
+
+  doImport();
+  return { imported, skipped };
+}
+
 export function exportToJson(ids?: string[]): string {
   let rows;
   if (ids && ids.length > 0) {
@@ -411,10 +479,6 @@ export function permanentDeletePrompt(id: string): void {
 export function emptyTrash(): { deleted: number } {
   const result = db.prepare(`DELETE FROM prompts WHERE deleted = 1`).run();
   return { deleted: result.changes };
-}
-
-export function deleteBuiltinPrompts(): void {
-  db.prepare(`DELETE FROM prompts WHERE is_builtin = 1`).run();
 }
 
 export function restoreBuiltinPrompts(): { restored: number } {

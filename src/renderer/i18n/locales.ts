@@ -41,7 +41,10 @@ export const locales = {
       confirm_hide_builtins: "Masquer ou supprimer les prompts par défaut ?",
       hide_builtins: "Masquer (recommandé)",
       delete_builtins_confirm: "Supprimer définitivement",
-      manage_builtins: "Gérer les prompts par défaut"
+      manage_builtins: "Gérer les prompts par défaut",
+      confirm_delete_theme: "Supprimer \"{{label}}\" ? Ses {{count}} prompt(s) seront déplacés vers \"Autre\".",
+      move_to: "Déplacer vers...",
+      paste_prompt: "Coller un prompt"
     },
     placeholders: {
       empty_body: "Le corps du prompt est vide...",
@@ -77,7 +80,9 @@ export const locales = {
       general: "Général",
       close: "Fermer",
       hidden_tab: "Masqués",
-      hidden_empty: "Aucun prompt masqué"
+      hidden_empty: "Aucun prompt masqué",
+      import_library: "Importer des prompts (JSON)",
+      import_library_desc: "Bibliothèque IA ou backup PromptVault"
     },
     toasts: {
       theme_created: "Thématique créée ✓",
@@ -91,7 +96,9 @@ export const locales = {
       prompts_hidden: "{{count}} prompt(s) masqué(s) ✓",
       prompt_unmasked: "Prompt restauré ✓",
       builtins_hidden: "Prompts par défaut masqués ✓",
-      builtins_deleted: "Prompts par défaut supprimés ✓"
+      builtins_deleted: "Prompts par défaut supprimés ✓",
+      import_done: "{{imported}} prompt(s) importé(s) — {{skipped}} ignoré(s) ✓",
+      prompts_moved: "{{count}} prompt(s) déplacé(s) vers {{theme}} ✓"
     },
     editor: {
       title_label: "Titre du prompt",
@@ -164,7 +171,10 @@ export const locales = {
       confirm_hide_builtins: "Hide or delete default prompts?",
       hide_builtins: "Hide (recommended)",
       delete_builtins_confirm: "Delete permanently",
-      manage_builtins: "Manage default prompts"
+      manage_builtins: "Manage default prompts",
+      confirm_delete_theme: "Delete \"{{label}}\"? Its {{count}} prompt(s) will be moved to \"Other\".",
+      move_to: "Move to...",
+      paste_prompt: "Paste prompt"
     },
     placeholders: {
       empty_body: "The prompt body is empty...",
@@ -200,7 +210,9 @@ export const locales = {
       general: "General",
       close: "Close",
       hidden_tab: "Hidden",
-      hidden_empty: "No hidden prompts"
+      hidden_empty: "No hidden prompts",
+      import_library: "Import prompts (JSON)",
+      import_library_desc: "AI library or PromptVault backup"
     },
     toasts: {
       theme_created: "Category created ✓",
@@ -214,7 +226,9 @@ export const locales = {
       prompts_hidden: "{{count}} prompt(s) hidden ✓",
       prompt_unmasked: "Prompt restored ✓",
       builtins_hidden: "Default prompts hidden ✓",
-      builtins_deleted: "Built-in prompts deleted ✓"
+      builtins_deleted: "Built-in prompts deleted ✓",
+      import_done: "{{imported}} prompt(s) imported — {{skipped}} skipped ✓",
+      prompts_moved: "{{count}} prompt(s) moved to {{theme}} ✓"
     },
     editor: {
       title_label: "Prompt Title",

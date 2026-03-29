@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../App';
-import type { Theme, Prompt, SuppressedPrompt } from '../types';
+import type { Theme, Prompt, SuppressedPrompt, ImportResult } from '../types';
 import { useToast } from './Toast';
 import ThemeGlyph from './ThemeGlyph';
 import { locales, type Language } from '../i18n/locales';
@@ -39,6 +39,8 @@ export default function SettingsModal({ open, onClose }: Props) {
   const [suppressedPrompts, setSuppressedPrompts] = useState<SuppressedPrompt[]>([]);
   const [openAccordions, setOpenAccordions] = useState<Set<string>>(new Set());
   const [showBuiltinsDialog, setShowBuiltinsDialog] = useState(false);
+  const [importPreview, setImportPreview] = useState<{ promptCount: number; themeCount: number; rawJson: string } | null>(null);
+  const [showImportHelp, setShowImportHelp] = useState(false);
 
   useEffect(() => {
     window.vault.prompts.getSuppressed().then(r => setSuppressedPrompts(r as SuppressedPrompt[]));
@@ -124,7 +126,8 @@ export default function SettingsModal({ open, onClose }: Props) {
   };
 
   const handleDeleteTheme = async (id: string) => {
-    if (!window.confirm(t('actions.confirm_delete', { title: '' }))) return;
+    const theme = themes.find(th => th.id === id);
+    if (!window.confirm(t('actions.confirm_delete_theme', { label: theme?.label ?? id, count: String(theme?.count ?? 0) }))) return;
     await window.vault.themes.delete(id);
     refreshThemes();
     toast(t('toasts.theme_deleted'));
@@ -171,6 +174,35 @@ export default function SettingsModal({ open, onClose }: Props) {
       refreshThemes();
       toast(t('toasts.builtins_deleted'));
     }
+  };
+
+  const handleOpenImportLibrary = async () => {
+    const filePath = await window.vault.system.openFileDialog({ filters: [{ name: 'JSON', extensions: ['json'] }] });
+    if (!filePath) return;
+    try {
+      const raw = await window.vault.system.readFile(filePath);
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) { toast('Format JSON invalide (tableau attendu)'); return; }
+      // Count themes and prompts in either format
+      const first = parsed[0] as Record<string, unknown> | undefined;
+      const isLibrary = first && Array.isArray(first.prompts);
+      const themeCount = isLibrary ? parsed.filter((e: Record<string, unknown>) => e.theme).length : 0;
+      const promptCount = isLibrary
+        ? parsed.reduce((acc: number, e: Record<string, unknown>) => acc + ((e.prompts as unknown[])?.length ?? 0), 0)
+        : parsed.length;
+      setImportPreview({ promptCount, themeCount, rawJson: raw });
+    } catch {
+      toast('Fichier JSON invalide');
+    }
+  };
+
+  const handleConfirmImport = async () => {
+    if (!importPreview) return;
+    const result = await window.vault.import.library(importPreview.rawJson) as ImportResult;
+    setImportPreview(null);
+    refreshThemes();
+    bumpPromptsVersion();
+    toast(t('toasts.import_done', { imported: String(result.imported), skipped: String(result.skipped) }));
   };
 
   const handlePickIconImage = async () => {
@@ -335,14 +367,6 @@ export default function SettingsModal({ open, onClose }: Props) {
                 <div>
                   <h3 className="text-sm font-bold uppercase tracking-widest text-muted mb-4">Data Actions</h3>
                   <div className="grid grid-cols-1 gap-3">
-                    <button onClick={() => window.vault.window.openImport()}
-                      className="w-full flex items-center gap-4 p-4 rounded-2xl border border-border hover:border-primary/40 bg-surface/50 group transition-all text-left">
-                      <span className="text-2xl group-hover:scale-110 transition-transform">📥</span>
-                      <div>
-                        <p className="text-sm font-bold">Import Database</p>
-                        <p className="text-xs text-muted">JSON or PromptVault backup</p>
-                      </div>
-                    </button>
                     <button onClick={async () => {
                         const path = await window.vault.export.toJson();
                         if (path) {
@@ -357,6 +381,109 @@ export default function SettingsModal({ open, onClose }: Props) {
                         <p className="text-xs text-muted">Backup all your prompts to a local file</p>
                       </div>
                     </button>
+                    <div>
+                      <div className="flex gap-2">
+                        <button onClick={handleOpenImportLibrary}
+                          className="flex-1 flex items-center gap-4 p-4 rounded-2xl border border-border hover:border-primary/40 bg-surface/50 group transition-all text-left">
+                          <span className="text-2xl group-hover:scale-110 transition-transform">📂</span>
+                          <div>
+                            <p className="text-sm font-bold">{t('settings.import_library')}</p>
+                            <p className="text-xs text-muted">{t('settings.import_library_desc')}</p>
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => setShowImportHelp(v => !v)}
+                          title="Comment générer un fichier JSON avec une IA ?"
+                          className={`px-3 rounded-2xl border transition-all text-lg ${showImportHelp ? 'border-primary/60 bg-primary/10 text-primary' : 'border-border bg-surface/50 text-muted hover:text-text hover:border-primary/40'}`}>
+                          ?
+                        </button>
+                      </div>
+                      {showImportHelp && (
+                        <div className="mt-3 p-4 rounded-2xl border border-primary/20 bg-primary/5 space-y-3 animate-in fade-in slide-in-from-top-2 duration-150">
+                          <p className="text-xs font-bold uppercase tracking-widest text-primary">
+                            {language === 'fr' ? 'Comment ça marche ?' : 'How it works'}
+                          </p>
+                          <ol className="text-xs text-muted space-y-1 list-decimal list-inside leading-relaxed">
+                            {language === 'fr' ? (
+                              <>
+                                <li>Copie le prompt ci-dessous</li>
+                                <li>Colle-le dans Claude, ChatGPT ou n'importe quelle IA</li>
+                                <li>Décris le sujet que tu veux (ex: "marketing", "cuisine", "code Python")</li>
+                                <li>L'IA génère le JSON — copie-le dans un fichier <code className="bg-surface px-1 rounded">.json</code></li>
+                                <li>Clique "Importer" et sélectionne le fichier</li>
+                              </>
+                            ) : (
+                              <>
+                                <li>Copy the prompt below</li>
+                                <li>Paste it into Claude, ChatGPT or any AI</li>
+                                <li>Describe the topic you want (e.g. "marketing", "cooking", "Python code")</li>
+                                <li>The AI generates JSON — save it as a <code className="bg-surface px-1 rounded">.json</code> file</li>
+                                <li>Click "Import" and select the file</li>
+                              </>
+                            )}
+                          </ol>
+                          <div className="relative">
+                            <pre className="text-[10px] bg-bg border border-border rounded-xl p-3 overflow-x-auto text-muted leading-relaxed whitespace-pre-wrap select-text">{language === 'fr'
+? `Génère une bibliothèque de prompts PromptVault en JSON.
+Format EXACT attendu :
+[
+  {
+    "theme": { "id": "identifiant", "label": "Nom", "icon": "🎯", "color": "#6C63FF" },
+    "prompts": [
+      { "title": "Titre", "body": "Contenu complet...", "tags": ["tag"], "lang": "fr", "type": "task" }
+    ]
+  }
+]
+Sujet : [DÉCRIS CE QUE TU VEUX]
+Nombre : [X prompts par thème]
+IMPORTANT : Réponds UNIQUEMENT avec le JSON valide, sans texte autour.`
+: `Generate a PromptVault prompt library in JSON.
+EXACT format expected:
+[
+  {
+    "theme": { "id": "identifier", "label": "Name", "icon": "🎯", "color": "#6C63FF" },
+    "prompts": [
+      { "title": "Title", "body": "Full content...", "tags": ["tag"], "lang": "en", "type": "task" }
+    ]
+  }
+]
+Topic: [DESCRIBE WHAT YOU WANT]
+Count: [X prompts per theme]
+IMPORTANT: Reply with ONLY the valid JSON, no surrounding text.`}</pre>
+                            <button
+                              onClick={() => {
+                                const prompt = language === 'fr'
+                                  ? `Génère une bibliothèque de prompts PromptVault en JSON.\nFormat EXACT attendu :\n[\n  {\n    "theme": { "id": "identifiant", "label": "Nom", "icon": "🎯", "color": "#6C63FF" },\n    "prompts": [\n      { "title": "Titre", "body": "Contenu complet...", "tags": ["tag"], "lang": "fr", "type": "task" }\n    ]\n  }\n]\nSujet : [DÉCRIS CE QUE TU VEUX]\nNombre : [X prompts par thème]\nIMPORTANT : Réponds UNIQUEMENT avec le JSON valide, sans texte autour.`
+                                  : `Generate a PromptVault prompt library in JSON.\nEXACT format expected:\n[\n  {\n    "theme": { "id": "identifier", "label": "Name", "icon": "🎯", "color": "#6C63FF" },\n    "prompts": [\n      { "title": "Title", "body": "Full content...", "tags": ["tag"], "lang": "en", "type": "task" }\n    ]\n  }\n]\nTopic: [DESCRIBE WHAT YOU WANT]\nCount: [X prompts per theme]\nIMPORTANT: Reply with ONLY the valid JSON, no surrounding text.`;
+                                window.vault.system.copyToClipboard(prompt);
+                                toast(language === 'fr' ? 'Prompt copié ✓' : 'Prompt copied ✓');
+                              }}
+                              className="absolute top-2 right-2 px-2 py-1 rounded-lg bg-primary text-white text-[10px] font-bold hover:bg-primary/80 transition-all">
+                              {language === 'fr' ? 'Copier' : 'Copy'}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      {importPreview && (
+                        <div className="mt-3 p-4 rounded-2xl border border-primary/30 bg-primary/5 space-y-3 animate-in fade-in zoom-in duration-150">
+                          <p className="text-sm font-bold text-text">
+                            {importPreview.themeCount > 0
+                              ? `${importPreview.themeCount} thématique(s) — ${importPreview.promptCount} prompt(s)`
+                              : `${importPreview.promptCount} prompt(s)`}
+                          </p>
+                          <div className="flex gap-2">
+                            <button onClick={handleConfirmImport}
+                              className="flex-1 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary/80 transition-all">
+                              ✓ {t('actions.ok')} — Importer
+                            </button>
+                            <button onClick={() => setImportPreview(null)}
+                              className="px-3 py-2 rounded-xl border border-border text-xs text-muted hover:bg-white/5 transition-all">
+                              ✕
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                     <div className="mt-1">
                       <button
                         onClick={() => setShowBuiltinsDialog(v => !v)}

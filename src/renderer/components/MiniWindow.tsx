@@ -142,7 +142,7 @@ const EditorPane = memo(({
 ));
 
 export default function MiniWindow() {
-  const { themes, bumpPromptsVersion, promptsVersion, t, language, setLanguage } = useApp();
+  const { themes, bumpPromptsVersion, promptsVersion, refreshThemes, t, language, setLanguage } = useApp();
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebounce(query, 120);
   
@@ -159,7 +159,7 @@ export default function MiniWindow() {
     return () => clearInterval(itv);
   }, []);
 
-  const [leftWidth, setLeftWidth] = useState(420);
+  const [leftWidth, setLeftWidth] = useState(() => Math.round(window.innerWidth / 2));
   const isResizing = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, prompt: Prompt } | null>(null);
@@ -324,7 +324,9 @@ export default function MiniWindow() {
             <div className="px-5 py-1.5 text-[10px] font-black text-white/20 uppercase tracking-widest border-b border-white/5 mb-2">{t('filter')}</div>
             <button onClick={() => handleCopy(contextMenu.prompt)} className="w-full text-left px-5 py-2.5 text-xs text-white hover:bg-primary/20 hover:text-primary transition-colors flex items-center gap-4 font-bold"><span>📋</span> {t('actions.copy').toUpperCase()}</button>
             <div className="h-px bg-white/5 my-1 mx-3" />
-            <button onClick={async () => { if (confirm(t('actions.confirm_delete', { title: contextMenu.prompt.title }))) { await window.vault.prompts.delete(contextMenu.prompt.id); setContextMenu(null); bumpPromptsVersion(); } }} className="w-full text-left px-5 py-2.5 text-xs text-red-400 hover:bg-red-400/10 transition-colors flex items-center gap-4 font-bold"><span>🗑</span> {t('actions.delete').toUpperCase()}</button>
+            <button onClick={async () => { await window.vault.prompts.hideBatch([contextMenu.prompt.id]); setContextMenu(null); bumpPromptsVersion(); refreshThemes(); }} className="w-full text-left px-5 py-2.5 text-xs text-amber-400 hover:bg-amber-400/10 transition-colors flex items-center gap-4 font-bold"><span>🙈</span> {t('actions.hide').toUpperCase()}</button>
+            <div className="h-px bg-white/5 my-1 mx-3" />
+            <button onClick={async () => { if (confirm(t('actions.confirm_delete', { title: contextMenu.prompt.title }))) { await window.vault.prompts.delete(contextMenu.prompt.id); setContextMenu(null); bumpPromptsVersion(); refreshThemes(); } }} className="w-full text-left px-5 py-2.5 text-xs text-red-400 hover:bg-red-400/10 transition-colors flex items-center gap-4 font-bold"><span>🗑</span> {t('actions.delete').toUpperCase()}</button>
           </motion.div>
         )}
       </AnimatePresence>
