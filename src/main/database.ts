@@ -292,6 +292,15 @@ export function getSuppressedPrompts(): unknown[] {
 // Alias backward compat
 export const getSuppressedBuiltins = getSuppressedPrompts;
 
+export function moveBatchPrompts(ids: string[], themeId: string): { moved: number } {
+  if (!ids.length) return { moved: 0 };
+  const placeholders = ids.map(() => '?').join(',');
+  const result = db.prepare(
+    `UPDATE prompts SET theme = ? WHERE id IN (${placeholders}) AND locked = 0`
+  ).run(themeId, ...ids);
+  return { moved: result.changes };
+}
+
 export function hideBatchPrompts(ids: string[]): { hidden: number } {
   if (!ids.length) return { hidden: 0 };
   const placeholders = ids.map(() => '?').join(',');

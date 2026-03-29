@@ -78,6 +78,7 @@ export interface VaultAPI {
     update: (id: string, data: Partial<Prompt>) => Promise<Prompt>;
     delete: (id: string) => Promise<void>;
     deleteBatch: (ids: string[]) => Promise<{ deleted: number }>;
+    moveBatch: (ids: string[], themeId: string) => Promise<{ moved: number }>;
     duplicate: (id: string) => Promise<Prompt>;
     incrementUseCount: (id: string) => Promise<void>;
     getDeleted: () => Promise<Prompt[]>;

@@ -367,14 +367,6 @@ export default function SettingsModal({ open, onClose }: Props) {
                 <div>
                   <h3 className="text-sm font-bold uppercase tracking-widest text-muted mb-4">Data Actions</h3>
                   <div className="grid grid-cols-1 gap-3">
-                    <button onClick={() => window.vault.window.openImport()}
-                      className="w-full flex items-center gap-4 p-4 rounded-2xl border border-border hover:border-primary/40 bg-surface/50 group transition-all text-left">
-                      <span className="text-2xl group-hover:scale-110 transition-transform">📥</span>
-                      <div>
-                        <p className="text-sm font-bold">Import Database</p>
-                        <p className="text-xs text-muted">JSON or PromptVault backup</p>
-                      </div>
-                    </button>
                     <button onClick={async () => {
                         const path = await window.vault.export.toJson();
                         if (path) {

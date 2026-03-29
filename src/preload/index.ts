@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('vault', {
     update:            (id: string, data: unknown)    => invoke('prompts:update', id, data),
     delete:            (id: string)                   => invoke('prompts:delete', id),
     deleteBatch:       (ids: string[])                => invoke('prompts:deleteBatch', ids),
+    moveBatch:         (ids: string[], themeId: string) => invoke('prompts:moveBatch', ids, themeId),
     duplicate:         (id: string)                   => invoke('prompts:duplicate', id),
     incrementUseCount: (id: string)                   => invoke('prompts:incrementUseCount', id),
     getDeleted:        ()           => invoke('prompts:getDeleted'),

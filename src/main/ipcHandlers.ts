@@ -21,6 +21,7 @@ export function registerHandlers(
   ipcMain.handle('prompts:update',            (_, id, data) => db.updatePrompt(id, data));
   ipcMain.handle('prompts:delete',            (_, id) => db.deletePrompt(id));
   ipcMain.handle('prompts:deleteBatch',       (_, ids) => db.deleteBatchPrompts(ids));
+  ipcMain.handle('prompts:moveBatch',         (_, ids, themeId) => db.moveBatchPrompts(ids, themeId));
   ipcMain.handle('prompts:duplicate',         (_, id) => db.duplicatePrompt(id));
   ipcMain.handle('prompts:incrementUseCount', (_, id) => db.incrementUseCount(id));
   ipcMain.handle('prompts:getDeleted',       () => db.getDeletedPrompts());
