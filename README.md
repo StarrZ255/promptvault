@@ -8,7 +8,7 @@ TELECHARGEMENT ET INSTALLATION
 
 Si vous voulez simplement utiliser l'application sans coder :
 
-1. Allez sur la page des Releases (https://github.com/USER/REPO/releases/latest).
+1. Allez sur la page des Releases (https://github.com/StarrZ255/promptvault/releases/latest).
 2. Dans la section Assets, téléchargez le fichier finissant par .exe.
 3. Lancez l'installateur et suivez les instructions.
 4. Utilisez Ctrl + Shift + P pour ouvrir le hub n'importe où.
@@ -29,7 +29,7 @@ Stack Technique :
 Electron, React, TypeScript, SQLite, Framer Motion et Tailwind CSS.
 
 Installation :
-git clone https://github.com/USER/REPO.git
+git clone https://github.com/StarrZ255/promptvault.git
 npm install
 npm run dev
 npm run dist:win
