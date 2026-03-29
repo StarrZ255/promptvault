@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../App';
-import type { Theme, Prompt, SuppressedPrompt } from '../types';
+import type { Theme, Prompt, SuppressedPrompt, ImportResult } from '../types';
 import { useToast } from './Toast';
 import ThemeGlyph from './ThemeGlyph';
 import { locales, type Language } from '../i18n/locales';
@@ -39,6 +39,7 @@ export default function SettingsModal({ open, onClose }: Props) {
   const [suppressedPrompts, setSuppressedPrompts] = useState<SuppressedPrompt[]>([]);
   const [openAccordions, setOpenAccordions] = useState<Set<string>>(new Set());
   const [showBuiltinsDialog, setShowBuiltinsDialog] = useState(false);
+  const [importPreview, setImportPreview] = useState<{ promptCount: number; themeCount: number; rawJson: string } | null>(null);
 
   useEffect(() => {
     window.vault.prompts.getSuppressed().then(r => setSuppressedPrompts(r as SuppressedPrompt[]));
@@ -171,6 +172,35 @@ export default function SettingsModal({ open, onClose }: Props) {
       refreshThemes();
       toast(t('toasts.builtins_deleted'));
     }
+  };
+
+  const handleOpenImportLibrary = async () => {
+    const filePath = await window.vault.system.openFileDialog({ filters: [{ name: 'JSON', extensions: ['json'] }] });
+    if (!filePath) return;
+    try {
+      const raw = await window.vault.system.readFile(filePath);
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) { toast('Format JSON invalide (tableau attendu)'); return; }
+      // Count themes and prompts in either format
+      const first = parsed[0] as Record<string, unknown> | undefined;
+      const isLibrary = first && Array.isArray(first.prompts);
+      const themeCount = isLibrary ? parsed.filter((e: Record<string, unknown>) => e.theme).length : 0;
+      const promptCount = isLibrary
+        ? parsed.reduce((acc: number, e: Record<string, unknown>) => acc + ((e.prompts as unknown[])?.length ?? 0), 0)
+        : parsed.length;
+      setImportPreview({ promptCount, themeCount, rawJson: raw });
+    } catch {
+      toast('Fichier JSON invalide');
+    }
+  };
+
+  const handleConfirmImport = async () => {
+    if (!importPreview) return;
+    const result = await window.vault.import.library(importPreview.rawJson) as ImportResult;
+    setImportPreview(null);
+    refreshThemes();
+    bumpPromptsVersion();
+    toast(t('toasts.import_done', { imported: String(result.imported), skipped: String(result.skipped) }));
   };
 
   const handlePickIconImage = async () => {
@@ -357,6 +387,35 @@ export default function SettingsModal({ open, onClose }: Props) {
                         <p className="text-xs text-muted">Backup all your prompts to a local file</p>
                       </div>
                     </button>
+                    <div>
+                      <button onClick={handleOpenImportLibrary}
+                        className="w-full flex items-center gap-4 p-4 rounded-2xl border border-border hover:border-primary/40 bg-surface/50 group transition-all text-left">
+                        <span className="text-2xl group-hover:scale-110 transition-transform">📂</span>
+                        <div>
+                          <p className="text-sm font-bold">{t('settings.import_library')}</p>
+                          <p className="text-xs text-muted">{t('settings.import_library_desc')}</p>
+                        </div>
+                      </button>
+                      {importPreview && (
+                        <div className="mt-3 p-4 rounded-2xl border border-primary/30 bg-primary/5 space-y-3 animate-in fade-in zoom-in duration-150">
+                          <p className="text-sm font-bold text-text">
+                            {importPreview.themeCount > 0
+                              ? `${importPreview.themeCount} thématique(s) — ${importPreview.promptCount} prompt(s)`
+                              : `${importPreview.promptCount} prompt(s)`}
+                          </p>
+                          <div className="flex gap-2">
+                            <button onClick={handleConfirmImport}
+                              className="flex-1 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary/80 transition-all">
+                              ✓ {t('actions.ok')} — Importer
+                            </button>
+                            <button onClick={() => setImportPreview(null)}
+                              className="px-3 py-2 rounded-xl border border-border text-xs text-muted hover:bg-white/5 transition-all">
+                              ✕
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                     <div className="mt-1">
                       <button
                         onClick={() => setShowBuiltinsDialog(v => !v)}

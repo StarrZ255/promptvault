@@ -201,7 +201,7 @@ export default function Sidebar({ onOpenSettings }: { onOpenSettings: () => void
                     <span className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
                       <button onClick={e => startEdit(theme, e)}
                         className="text-muted hover:text-primary text-xs px-1 transition-colors">✏️</button>
-                      {theme.is_custom === 1 && (
+                      {theme.id !== 'autre' && (
                         <button onClick={e => handleDeleteTheme(theme.id, e)}
                           className="text-red-400/50 hover:text-red-400 text-xs px-1 transition-colors">🗑</button>
                       )}

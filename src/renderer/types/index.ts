@@ -52,6 +52,11 @@ export interface ImportReport {
   errors: string[];
 }
 
+export interface ImportResult {
+  imported: number;
+  skipped: number;
+}
+
 export type SuppressedPrompt = Prompt & {
   theme_label: string;
   theme_icon: string;
@@ -96,8 +101,9 @@ export interface VaultAPI {
     saveIconImage: (themeId: string) => Promise<string | null>;
   };
   import: {
-    fromJson: (filePath: string) => Promise<ImportReport>;
-    fromPaste: (content: string) => Promise<PartialPrompt>;
+    fromJson:  (filePath: string)   => Promise<ImportReport>;
+    fromPaste: (content: string)    => Promise<PartialPrompt>;
+    library:   (jsonString: string) => Promise<ImportResult>;
   };
   export: {
     toJson: (ids?: string[]) => Promise<string>;
@@ -108,6 +114,7 @@ export interface VaultAPI {
   system: {
     openFileDialog: (opts: { filters?: { name: string; extensions: string[] }[] }) => Promise<string | null>;
     saveFileDialog: (opts: { defaultPath?: string }) => Promise<string | null>;
+    readFile: (filePath: string) => Promise<string>;
     copyToClipboard: (text: string) => Promise<void>;
     pathToFileUrl: (filePath: string) => Promise<string>;
   };

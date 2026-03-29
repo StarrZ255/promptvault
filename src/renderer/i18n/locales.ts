@@ -77,7 +77,9 @@ export const locales = {
       general: "Général",
       close: "Fermer",
       hidden_tab: "Masqués",
-      hidden_empty: "Aucun prompt masqué"
+      hidden_empty: "Aucun prompt masqué",
+      import_library: "Importer une bibliothèque JSON",
+      import_library_desc: "Thèmes + prompts depuis un fichier généré par IA"
     },
     toasts: {
       theme_created: "Thématique créée ✓",
@@ -91,7 +93,8 @@ export const locales = {
       prompts_hidden: "{{count}} prompt(s) masqué(s) ✓",
       prompt_unmasked: "Prompt restauré ✓",
       builtins_hidden: "Prompts par défaut masqués ✓",
-      builtins_deleted: "Prompts par défaut supprimés ✓"
+      builtins_deleted: "Prompts par défaut supprimés ✓",
+      import_done: "{{imported}} prompt(s) importé(s) — {{skipped}} ignoré(s) ✓"
     },
     editor: {
       title_label: "Titre du prompt",
@@ -200,7 +203,9 @@ export const locales = {
       general: "General",
       close: "Close",
       hidden_tab: "Hidden",
-      hidden_empty: "No hidden prompts"
+      hidden_empty: "No hidden prompts",
+      import_library: "Import JSON Library",
+      import_library_desc: "Themes + prompts from an AI-generated file"
     },
     toasts: {
       theme_created: "Category created ✓",
@@ -214,7 +219,8 @@ export const locales = {
       prompts_hidden: "{{count}} prompt(s) hidden ✓",
       prompt_unmasked: "Prompt restored ✓",
       builtins_hidden: "Default prompts hidden ✓",
-      builtins_deleted: "Built-in prompts deleted ✓"
+      builtins_deleted: "Built-in prompts deleted ✓",
+      import_done: "{{imported}} prompt(s) imported — {{skipped}} skipped ✓"
     },
     editor: {
       title_label: "Prompt Title",
