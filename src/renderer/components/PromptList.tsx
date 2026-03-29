@@ -158,7 +158,7 @@ export default function PromptList() {
                 isSelected={selected.has(p.id)}
                 isActive={selectedPrompt?.id === p.id}
                 onSelect={toggle}
-                onClick={setSelectedPrompt}
+                onClick={p => setSelectedPrompt(selectedPrompt?.id === p.id ? null : p)}
               />
             ))}
             {prompts.length === 0 && (

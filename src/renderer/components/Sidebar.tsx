@@ -14,6 +14,8 @@ export default function Sidebar({ onOpenSettings }: { onOpenSettings: () => void
   const [newName, setNewName] = useState('');
   const [newIcon, setNewIcon] = useState('🗂️');
   const [newColor, setNewColor] = useState('#6C63FF');
+  const [showIconPicker, setShowIconPicker] = useState(false);
+  const QUICK_ICONS = ['🗂️','📁','🎯','🚀','💡','🔥','⚡','🎨','🧠','💻','📝','🔍','🎓','📊','🛠️','🌟','🏆','🔐','🌈','👤','📓','🤖','✍️','📱','⚙️','🧪','🔋','🎮','📡','💎'];
 
   // Inline edit
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -33,7 +35,7 @@ export default function Sidebar({ onOpenSettings }: { onOpenSettings: () => void
     const id = newName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || `custom-${Date.now()}`;
     await window.vault.themes.create({ id, label: newName, icon: newIcon, color: newColor });
     refreshThemes();
-    setNewName(''); setNewIcon('🗂️'); setNewColor('#6C63FF');
+    setNewName(''); setNewIcon('🗂️'); setNewColor('#6C63FF'); setShowIconPicker(false);
     setAddingTheme(false);
     toast(t('toasts.theme_created'));
   };
@@ -123,9 +125,11 @@ export default function Sidebar({ onOpenSettings }: { onOpenSettings: () => void
           {addingTheme && (
             <div className="mx-1 mb-1 p-2 bg-bg border border-border rounded-xl space-y-1.5 shadow-xl">
               <div className="flex gap-1">
-                <input value={newIcon} onChange={e => setNewIcon(e.target.value)}
-                  className="w-10 bg-surface border border-border rounded-lg px-1 py-1 text-center text-base focus:outline-none focus:border-primary select-text"
-                  placeholder="🎯" />
+                <button onClick={() => setShowIconPicker(v => !v)}
+                  className={`w-10 h-8 bg-surface border rounded-lg text-center text-base focus:outline-none transition-colors ${showIconPicker ? 'border-primary' : 'border-border'}`}
+                  title="Choisir une icône">
+                  {newIcon}
+                </button>
                 <input value={newName} onChange={e => setNewName(e.target.value)}
                   placeholder="..."
                   onKeyDown={e => { if (e.key === 'Enter') handleQuickAddTheme(); if (e.key === 'Escape') setAddingTheme(false); }}
@@ -133,6 +137,16 @@ export default function Sidebar({ onOpenSettings }: { onOpenSettings: () => void
                 <input type="color" value={newColor} onChange={e => setNewColor(e.target.value)}
                   className="w-8 h-8 rounded-lg border border-border cursor-pointer bg-transparent" />
               </div>
+              {showIconPicker && (
+                <div className="grid grid-cols-6 gap-1 p-1.5 bg-surface border border-border rounded-lg">
+                  {QUICK_ICONS.map(icon => (
+                    <button key={icon} onClick={() => { setNewIcon(icon); setShowIconPicker(false); }}
+                      className={`h-7 flex items-center justify-center text-base rounded-md transition-colors hover:bg-primary/20 ${newIcon === icon ? 'bg-primary/30 ring-1 ring-primary' : ''}`}>
+                      {icon}
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className="flex gap-1">
                 <button onClick={handleQuickAddTheme}
                   className="flex-1 py-1 rounded-lg bg-primary text-white text-xs font-semibold">{t('actions.create')}</button>
