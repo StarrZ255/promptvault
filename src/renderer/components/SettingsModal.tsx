@@ -38,6 +38,7 @@ export default function SettingsModal({ open, onClose }: Props) {
 
   const [suppressedBuiltins, setSuppressedBuiltins] = useState<Prompt[]>([]);
   const [showSuppressedFolder, setShowSuppressedFolder] = useState(false);
+  const [deletingBuiltins, setDeletingBuiltins] = useState(false);
 
   useEffect(() => {
     window.vault.prompts.getSuppressedBuiltins().then(r => setSuppressedBuiltins(r as Prompt[]));
@@ -128,6 +129,20 @@ export default function SettingsModal({ open, onClose }: Props) {
     await window.vault.prompts.update(id, { suppressed: 0 });
     bumpPromptsVersion();
     toast(t('toasts.prompt_saved'));
+  };
+
+  const handleDeleteBuiltins = async () => {
+    if (!window.confirm(t('actions.confirm_delete_builtins'))) return;
+    setDeletingBuiltins(true);
+    try {
+      await window.vault.prompts.deleteBuiltins();
+      bumpPromptsVersion();
+      toast(t('toasts.builtins_deleted'));
+    } catch (e) {
+      toast(`Error: ${String(e)}`);
+    } finally {
+      setDeletingBuiltins(false);
+    }
   };
 
   const handlePickIconImage = async () => {
@@ -303,6 +318,17 @@ export default function SettingsModal({ open, onClose }: Props) {
                       <div>
                         <p className="text-sm font-bold">Export Library (JSON)</p>
                         <p className="text-xs text-muted">Backup all your prompts to a local file</p>
+                      </div>
+                    </button>
+                    <button 
+                      onClick={handleDeleteBuiltins}
+                      disabled={deletingBuiltins}
+                      className="w-full flex items-center gap-4 p-4 rounded-2xl border border-border hover:border-red-500/40 bg-surface/50 group transition-all text-left disabled:opacity-50"
+                    >
+                      <span className="text-2xl group-hover:scale-110 transition-transform">🗑️</span>
+                      <div>
+                        <p className="text-sm font-bold text-red-400">{t('settings.delete_builtins_label')}</p>
+                        <p className="text-xs text-muted">{t('settings.delete_builtins_desc')}</p>
                       </div>
                     </button>
                   </div>

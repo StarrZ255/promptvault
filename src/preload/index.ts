@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('vault', {
     restore:           (id: string) => invoke('prompts:restore', id),
     permanentDelete:   (id: string) => invoke('prompts:permanentDelete', id),
     emptyTrash:        ()           => invoke('prompts:emptyTrash'),
+    deleteBuiltins:    ()           => invoke('prompts:deleteBuiltins'),
     getSuppressedBuiltins: ()        => invoke('prompts:getSuppressedBuiltins'),
   },
   themes: {

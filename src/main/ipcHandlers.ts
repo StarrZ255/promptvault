@@ -27,6 +27,7 @@ export function registerHandlers(
   ipcMain.handle('prompts:restore',          (_, id) => db.restorePrompt(id));
   ipcMain.handle('prompts:permanentDelete',  (_, id) => db.permanentDeletePrompt(id));
   ipcMain.handle('prompts:emptyTrash',       () => db.emptyTrash());
+  ipcMain.handle('prompts:deleteBuiltins',   () => db.deleteBuiltinPrompts());
   ipcMain.handle('prompts:getSuppressedBuiltins', () => db.getSuppressedBuiltins());
 
   // ─── Thématiques ────────────────────────────────────────────────────────────

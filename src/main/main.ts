@@ -24,6 +24,7 @@ function createTrayIcon(): void {
     ? nativeImage.createFromPath(iconPath)
     : nativeImage.createFromDataURL(`data:image/png;base64,${TRAY_ICON_B64}`);
     
+  if (tray) tray.destroy();
   tray = new Tray(icon);
   tray.setToolTip('PromptVault');
 
@@ -206,68 +207,77 @@ protocol.registerSchemesAsPrivileged([
   { scheme: 'vault-img', privileges: { standard: true, secure: true, supportFetchAPI: true, bypassCSP: true } }
 ]);
 
-app.whenReady().then(() => {
-  // Gérer le protocole vault-img
-  protocol.handle('vault-img', (request) => {
-    const url = request.url.replace('vault-img://', '');
-    const decodedUrl = decodeURIComponent(url);
-    const filePath = path.normalize(decodedUrl);
-    // On vérifie que le fichier est bien dans userData/theme-icons pour la sécurité
-    const iconsDir = path.join(app.getPath('userData'), 'theme-icons');
-    if (!filePath.startsWith(iconsDir)) {
-      return new Response('Forbidden', { status: 403 });
-    }
-    return fetch(`file://${filePath}`);
-  });
-
-  try {
-    initDatabase();
-  } catch (err) {
-    dialog.showErrorBox('Erreur base de données', String(err));
-    app.quit();
-    return;
-  }
-
-  registerHandlers(
-    getOrCreateQuickCapture,
-    getOrCreateImportWindow,
-    getOrCreateMiniWindow,
-    showMainWindow,
-    () => currentShortcuts,
-    updateShortcuts,
-  );
-
-  // Handlers pour les contrôles de fenêtre personnalisés
-  ipcMain.on('window:minimize', (e) => {
-    BrowserWindow.fromWebContents(e.sender)?.minimize();
-  });
-  ipcMain.on('window:maximize', (e) => {
-    const win = BrowserWindow.fromWebContents(e.sender);
-    if (win?.isMaximized()) win.unmaximize(); else win?.maximize();
-  });
-  ipcMain.on('window:close', (e) => {
-    const win = BrowserWindow.fromWebContents(e.sender);
-    const miniWin = getOrCreateMiniWindow();
-    if (win === mainWindow || win === miniWin) win?.hide(); else win?.close();
-  });
-
-  ipcMain.on('window:edit-prompt', (_, prompt: unknown) => {
+// Gérer une seule instance
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    // Si une deuxième instance est lancée, on affiche la fenêtre principale
     showMainWindow();
-    mainWindow?.webContents.send('shortcut:edit-prompt', prompt);
   });
 
-  createTrayIcon();
+  app.whenReady().then(() => {
+    // Gérer le protocole vault-img
+    protocol.handle('vault-img', (request) => {
+      const url = request.url.replace('vault-img://', '');
+      const decodedUrl = decodeURIComponent(url);
+      const filePath = path.normalize(decodedUrl);
+      // On vérifie que le fichier est bien dans userData/theme-icons pour la sécurité
+      const iconsDir = path.join(app.getPath('userData'), 'theme-icons');
+      if (!filePath.startsWith(iconsDir)) {
+        return new Response('Forbidden', { status: 403 });
+      }
+      return fetch(`file://${filePath}`);
+    });
 
-  const startHidden = process.argv.includes('--hidden');
-  mainWindow = createMainWindow();
-  if (startHidden) mainWindow.hide();
+    try {
+      initDatabase();
+    } catch (err) {
+      dialog.showErrorBox('Erreur base de données', String(err));
+      app.quit();
+      return;
+    }
 
-  registerShortcuts();
+    registerHandlers(
+      getOrCreateQuickCapture,
+      getOrCreateImportWindow,
+      getOrCreateMiniWindow,
+      showMainWindow,
+      () => currentShortcuts,
+      updateShortcuts,
+    );
 
-  app.on('activate', () => {
-    if (!mainWindow || mainWindow.isDestroyed()) mainWindow = createMainWindow();
+    // Handlers pour les contrôles de fenêtre personnalisés
+    ipcMain.on('window:minimize', (e) => {
+      BrowserWindow.fromWebContents(e.sender)?.minimize();
+    });
+    ipcMain.on('window:maximize', (e) => {
+      const win = BrowserWindow.fromWebContents(e.sender);
+      if (win?.isMaximized()) win.unmaximize(); else win?.maximize();
+    });
+    ipcMain.on('window:close', (e) => {
+      const win = BrowserWindow.fromWebContents(e.sender);
+      const miniWin = getOrCreateMiniWindow();
+      if (win === mainWindow || win === miniWin) win?.hide(); else win?.close();
+    });
+
+    ipcMain.on('window:edit-prompt', (_, prompt: unknown) => {
+      showMainWindow();
+      mainWindow?.webContents.send('shortcut:edit-prompt', prompt);
+    });
+
+    const startHidden = process.argv.includes('--hidden');
+    mainWindow = createMainWindow();
+    if (startHidden) mainWindow.hide();
+
+    registerShortcuts();
+
+    app.on('activate', () => {
+      if (!mainWindow || mainWindow.isDestroyed()) mainWindow = createMainWindow();
+    });
   });
-});
+}
 
 app.on('window-all-closed', () => {
   // Reste actif en arrière-plan pour les raccourcis globaux

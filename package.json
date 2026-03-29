@@ -81,7 +81,8 @@
       "allowToChangeInstallationDirectory": true,
       "deleteAppDataOnUninstall": false,
       "installerLanguages": ["fr_FR", "en_US"],
-      "language": "1036"
+      "language": "1036",
+      "include": "build/installer.nsh"
     },
     "portable": {
       "artifactName": "PromptVault-${version}-portable.exe"

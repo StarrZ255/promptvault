@@ -73,6 +73,7 @@ export interface VaultAPI {
     restore: (id: string) => Promise<void>;
     permanentDelete: (id: string) => Promise<void>;
     emptyTrash: () => Promise<{ deleted: number }>;
+    deleteBuiltins: () => Promise<void>;
     getSuppressedBuiltins: () => Promise<Prompt[]>;
   };
   themes: {

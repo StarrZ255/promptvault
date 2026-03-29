@@ -20,6 +20,7 @@ export const locales = {
       copy: "COPIER",
       delete: "SUPPRIMER",
       confirm_delete: "Supprimer \"{{title}}\" ?",
+      confirm_delete_builtins: "Supprimer tous les prompts par défaut ? Cette action est irréversible.",
       confirm_perm_delete: "Supprimer définitivement ? Cette action est irréversible.",
       confirm_empty_trash: "Vider la corbeille ? Tous les prompts seront perdus.",
       open_main: "Ouvrir l'application complète",
@@ -62,6 +63,8 @@ export const locales = {
       language: "Langue",
       theme: "Apparence",
       shortcuts: "Raccourcis clavier",
+      delete_builtins_label: "Supprimer les prompts par défaut",
+      delete_builtins_desc: "Retire définitivement tous les prompts pré-installés",
       general: "Général",
       close: "Fermer"
     },
@@ -73,6 +76,7 @@ export const locales = {
       prompt_restored: "Prompt restauré ✓",
       trash_emptied: "Corbeille vidée",
       perm_deleted: "Supprimé définitivement",
+      builtins_deleted: "Prompts par défaut supprimés ✓",
       exported: "Exporté vers {{path}}"
     },
     editor: {
@@ -125,6 +129,7 @@ export const locales = {
       copy: "COPY",
       delete: "DELETE",
       confirm_delete: "Delete \"{{title}}\"?",
+      confirm_delete_builtins: "Delete all built-in prompts? This cannot be undone.",
       confirm_perm_delete: "Permanently delete? This cannot be undone.",
       confirm_empty_trash: "Empty trash? All prompts will be lost forever.",
       open_main: "Open Full Application",
@@ -167,6 +172,8 @@ export const locales = {
       language: "Language",
       theme: "Appearance",
       shortcuts: "Keyboard shortcuts",
+      delete_builtins_label: "Delete built-in prompts",
+      delete_builtins_desc: "Permanently remove all pre-installed prompts",
       general: "General",
       close: "Close"
     },
@@ -178,6 +185,7 @@ export const locales = {
       prompt_restored: "Prompt restored ✓",
       trash_emptied: "Trash emptied",
       perm_deleted: "Permanently deleted",
+      builtins_deleted: "Built-in prompts deleted ✓",
       exported: "Exported to {{path}}"
     },
     editor: {

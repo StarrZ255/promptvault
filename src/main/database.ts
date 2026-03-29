@@ -90,7 +90,13 @@ export function initDatabase(): void {
 
   const count = (db.prepare(`SELECT COUNT(*) as n FROM prompts WHERE is_builtin = 1`).get() as { n: number }).n;
   if (count === 0) {
-    seedBuiltinPrompts();
+    const skipFlag = path.join(app.getPath('userData'), 'skip-seeds.flag');
+    if (fs.existsSync(skipFlag)) {
+      console.log('[db] Skip seeds flag detected, skipping builtin prompts seeding.');
+      try { fs.unlinkSync(skipFlag); } catch (e) { console.error('Failed to delete skip-seeds flag', e); }
+    } else {
+      seedBuiltinPrompts();
+    }
   }
 }
 
@@ -371,6 +377,10 @@ export function permanentDeletePrompt(id: string): void {
 export function emptyTrash(): { deleted: number } {
   const result = db.prepare(`DELETE FROM prompts WHERE deleted = 1`).run();
   return { deleted: result.changes };
+}
+
+export function deleteBuiltinPrompts(): void {
+  db.prepare(`DELETE FROM prompts WHERE is_builtin = 1`).run();
 }
 
 export function restoreBuiltinPrompts(): { restored: number } {
