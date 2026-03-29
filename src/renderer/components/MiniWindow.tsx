@@ -20,10 +20,10 @@ function useDebounce<T>(value: T, delay: number): T {
  * COMPOSANT MÉMOÏSÉ POUR CHAQUE ITEM
  */
 const ResultItem = memo(({ 
-  prompt, theme, isFocused, onMouseEnter, onContextMenu, onClick, index, query 
+  prompt, theme, isFocused, onMouseEnter, onContextMenu, onClick, index, query, t 
 }: { 
   prompt: Prompt; theme?: Theme; isFocused: boolean; onMouseEnter: () => void; 
-  onContextMenu: (e: React.MouseEvent) => void; onClick: () => void; index: number; query: string;
+  onContextMenu: (e: React.MouseEvent) => void; onClick: () => void; index: number; query: string; t: any;
 }) => {
   const highlight = (text: string, q: string) => {
     if (!q || q.length < 2) return text;
@@ -51,8 +51,8 @@ const ResultItem = memo(({
             </div>
             {prompt.is_favorite === 1 && <span className="text-[10px] text-yellow-500/80">★</span>}
         </div>
-        <div className="text-[10px] truncate text-white/30 font-semibold tracking-tighter">
-          {theme?.label.toUpperCase() || 'AUTRE'}
+        <div className="text-[10px] truncate text-white/30 font-semibold tracking-tighter uppercase">
+          {theme?.label || t('other_category')}
         </div>
       </div>
       <div className={`text-[9px] font-['JetBrains_Mono'] px-1.5 py-0.5 rounded bg-[#23232b] border ${isFocused ? 'text-primary border-primary/40' : 'text-white/5 border-white/5'}`}>
@@ -66,23 +66,24 @@ const ResultItem = memo(({
  * COMPOSANT MÉMOÏSÉ POUR TOUTE LA LISTE
  */
 const ResultsList = memo(({ 
-    prompts, focusedIdx, themes, query, onSetFocusedIdx, onHandleCopy, onContextMenu 
+    prompts, focusedIdx, themes, query, onSetFocusedIdx, onHandleCopy, onContextMenu, t 
 }: {
-    prompts: Prompt[]; focusedIdx: number; themes: Theme[]; query: string;
+    prompts: Prompt[]; focusedIdx: number; themes: Theme[]; query: string; t: any;
     onSetFocusedIdx: (i: number) => void; onHandleCopy: (p: Prompt) => void; onContextMenu: (e: React.MouseEvent, p: Prompt) => void;
 }) => (
     <div className="flex-1 overflow-y-auto no-scrollbar py-1">
       {prompts.map((p, i) => (
-        <ResultItem key={p.id} index={i} prompt={p} query={query} theme={themes.find(t => t.id === p.theme)} isFocused={i === focusedIdx}
+        <ResultItem key={p.id} index={i} prompt={p} query={query} theme={themes.find(tIdx => tIdx.id === p.theme)} isFocused={i === focusedIdx}
           onMouseEnter={() => onSetFocusedIdx(i)}
           onContextMenu={(e) => onContextMenu(e, p)}
           onClick={() => onHandleCopy(p)}
+          t={t}
         />
       ))}
       {prompts.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 text-white/5">
-          <span className="text-5xl mb-4 opacity-50 font-['JetBrains_Mono']">X</span>
-          <p className="text-[10px] uppercase font-bold tracking-widest">Aucun résultat</p>
+          <span className="text-5xl mb-4 opacity-30">📂</span>
+          <p className="text-[10px] uppercase font-bold tracking-widest">{t('no_results')}</p>
         </div>
       )}
     </div>
@@ -92,61 +93,56 @@ const ResultsList = memo(({
  * COMPOSANT MÉMOÏSÉ POUR LE PANNEAU D'ÉDITION
  */
 const EditorPane = memo(({ 
-    activePrompt, editedBody, onSetEditedBody, onSave, isSaving 
+    activePrompt, editedBody, onSetEditedBody, onSave, isSaving, t 
 }: { 
-    activePrompt: Prompt | null; editedBody: string; onSetEditedBody: (v: string) => void; onSave: () => void; isSaving: boolean;
+    activePrompt: Prompt | null; editedBody: string; onSetEditedBody: (v: string) => void; onSave: () => void; isSaving: boolean; t: any;
 }) => (
     <div className="flex-1 flex flex-col bg-[#16161c]">
     {activePrompt ? (
       <div className="flex-1 flex flex-col p-8 animate-in fade-in duration-200">
-        <div className="flex items-start justify-between mb-6">
-          <div>
-            <h2 className="text-2xl font-bold text-white tracking-tight">{activePrompt.title}</h2>
+        <div className="flex items-start justify-between gap-8 mb-6">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-2xl font-bold text-white tracking-tight line-clamp-2" title={activePrompt.title}>
+              {activePrompt.title}
+            </h2>
             <div className="flex items-center gap-3 mt-2">
               <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md ${activePrompt.is_favorite ? 'bg-yellow-500/10 text-yellow-500' : 'bg-primary/20 text-primary'}`}>
-                {activePrompt.is_favorite ? '⭐ FAVORIS' : (activePrompt.theme || 'AUTRE')}
+                {activePrompt.is_favorite ? `⭐ ${t('favorites_only').toUpperCase()}` : (activePrompt.theme || t('other_category'))}
               </span>
-              <div className="w-[1px] h-3 bg-white/10" />
-              <span className="text-[10px] text-white/20 font-mono">HASH::{activePrompt.id.slice(0, 8)}</span>
             </div>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-2xl shadow-xl grayscale opacity-50">📝</div>
+          <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-2xl shadow-xl grayscale opacity-50 shrink-0 select-none">📝</div>
         </div>
 
         <div className="flex-1 relative">
           <textarea value={editedBody} onChange={(e) => onSetEditedBody(e.target.value)} spellCheck="false"
             className="w-full h-full bg-[#1a1a20]/40 border border-white/10 rounded-3xl p-6 text-base leading-relaxed text-white/90 outline-none focus:border-primary/50 focus:bg-[#1a1a20]/60 transition-all resize-none shadow-2xl no-scrollbar font-sans"
-            placeholder="Le corps du prompt est vide..."
+            placeholder={t('placeholders.empty_body')}
           />
         </div>
 
-        <div className="mt-8 flex items-center justify-between">
-          <div className="flex gap-8">
-            <div className="flex flex-col"><span className="text-[10px] font-bold text-white/10 uppercase tracking-widest">Navigation</span><span className="text-xs text-white/40">↑↓ Flèches</span></div>
-            <div className="flex flex-col"><span className="text-[10px] font-bold text-white/10 uppercase tracking-widest">Action</span><span className="text-xs text-white/40">↵ Copier</span></div>
-          </div>
+        <div className="mt-8 flex items-center justify-end">
           <div className="flex items-center gap-6">
-            <div className="text-right"><span className="block text-[10px] font-black text-white/10 uppercase tracking-widest">Raccourci</span><span className="text-xs text-primary font-bold">CTRL + S</span></div>
             <button onClick={onSave} disabled={isSaving}
               className={`px-8 py-3 rounded-2xl text-[11px] font-black tracking-widest uppercase transition-all shadow-2xl active:scale-95
                 ${isSaving ? 'bg-green-500 text-white' : 'bg-primary text-white hover:bg-primary/80 shadow-primary/20'}`}
             >
-              {isSaving ? '✓ ENREGISTRÉ' : 'SAUVEGARDER'}
+              {isSaving ? t('actions.saved') : t('actions.save')}
             </button>
           </div>
         </div>
       </div>
     ) : (
       <div className="flex-1 flex flex-col items-center justify-center text-white/5 space-y-6">
-        <div className="text-8xl opacity-20">✨</div>
-        <p className="text-sm font-black uppercase tracking-[0.3em] opacity-40">Hub de Productivité</p>
+        <div className="text-8xl opacity-10">✨</div>
+        <p className="text-sm font-black uppercase tracking-[0.4em] opacity-30">{t('placeholders.select_prompt')}</p>
       </div>
     )}
   </div>
 ));
 
 export default function MiniWindow() {
-  const { themes, bumpPromptsVersion } = useApp();
+  const { themes, bumpPromptsVersion, promptsVersion, t, language, setLanguage } = useApp();
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebounce(query, 120);
   
@@ -184,7 +180,7 @@ export default function MiniWindow() {
       setFocusedIdx(0);
     };
     load();
-  }, [debouncedQuery, activeThemeId, isFavoritesOnly]);
+  }, [debouncedQuery, activeThemeId, isFavoritesOnly, promptsVersion]);
 
   useEffect(() => {
     if (activePrompt) setEditedBody(activePrompt.body);
@@ -241,7 +237,7 @@ export default function MiniWindow() {
 
   const onContextMenu = useCallback((e: React.MouseEvent, p: Prompt) => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, prompt: p }); }, []);
 
-  const activeTheme = themes.find(t => t.id === activeThemeId);
+  const activeTheme = themes.find(tIdx => tIdx.id === activeThemeId);
 
   return (
     <div className="w-full h-full flex flex-row font-['Inter'] text-text select-none bg-[#1a1a20] overflow-hidden" onClick={() => setContextMenu(null)}>
@@ -249,32 +245,32 @@ export default function MiniWindow() {
         
         {/* Header */}
         <div className="flex items-center gap-4 px-6 pt-6 pb-4 bg-[#23232b] border-b border-white/5">
-          <input ref={inputRef} type="text" placeholder="Rechercher..." autoComplete="off" spellCheck="false"
+          <input ref={inputRef} type="text" placeholder={t('search')} autoComplete="off" spellCheck="false"
             value={query} onChange={(e) => setQuery(e.target.value)}
-            className="flex-1 bg-transparent border-none outline-none text-2xl font-light text-white placeholder-white/10"
+            className="flex-1 bg-transparent border-none outline-none text-2xl font-light text-white placeholder-white/5"
           />
-          <div className="flex items-center gap-4 text-white/30 shrink-0">
-            <span className="text-xs font-bold font-['JetBrains_Mono']">{time}</span>
-            <div className="text-3xl filter saturate-150">🔍</div>
+          <div className="flex items-center gap-4 text-white/20 shrink-0">
+            <span className="text-[10px] font-bold font-['JetBrains_Mono']">{time}</span>
+            <div className="text-3xl filter saturate-50 opacity-40">🔍</div>
           </div>
         </div>
 
-        {/* Toolbar - Added Favorites Toggle */}
+        {/* Toolbar */}
         <div className="px-5 py-2.5 flex items-center justify-between border-b border-white/5 bg-[#1a1a20]">
           <div className="flex items-center gap-2">
             <div className="relative">
                 <button onClick={(e) => { e.stopPropagation(); setShowFilterMenu(!showFilterMenu); }}
-                    className={`flex items-center gap-2 px-3 py-1 rounded-md text-[10px] font-bold transition-all border ${activeThemeId ? 'bg-primary/20 border-primary/40 text-primary uppercase' : 'bg-white/5 border-white/10 text-white/40 uppercase'}`}>
-                📂 {activeTheme?.label || 'FILTRE'} ▾
+                    className={`flex items-center gap-2 px-3 py-1 rounded-md text-[10px] font-bold transition-all border ${activeThemeId ? 'bg-primary/20 border-primary/40 text-primary uppercase' : 'bg-white/5 border-white/10 text-white/30 uppercase'}`}>
+                📂 {activeTheme?.label || t('filter')} ▾
                 </button>
                 <AnimatePresence>
                     {showFilterMenu && (
                     <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 5 }}
-                        className="absolute left-0 top-full mt-2 w-56 bg-[#2a2a35] border border-white/10 rounded-xl shadow-2xl z-50 py-1.5 overflow-hidden"
+                        className="absolute left-0 top-full mt-2 w-56 bg-[#2a2a35] border border-white/10 rounded-xl shadow-2xl z-50 py-1.5 overflow-hidden font-bold"
                     >
-                        <button onClick={() => { setActiveThemeId(null); setShowFilterMenu(false); }} className={`w-full text-left px-4 py-2 text-xs hover:bg-white/5 font-medium ${!activeThemeId ? 'text-primary' : 'text-white/60'}`}>Toutes les catégories</button>
-                        {themes.map(t => (
-                        <button key={t.id} onClick={() => { setActiveThemeId(t.id); setShowFilterMenu(false); }} className={`w-full text-left px-4 py-2 text-xs hover:bg-white/5 font-medium ${activeThemeId === t.id ? 'text-primary' : 'text-white/60'}`}>{t.label}</button>
+                        <button onClick={() => { setActiveThemeId(null); setShowFilterMenu(false); }} className={`w-full text-left px-4 py-2 text-[10px] hover:bg-white/5 tracking-widest ${!activeThemeId ? 'text-primary' : 'text-white/40'}`}>{t('all_categories').toUpperCase()}</button>
+                        {themes.map(tIdx => (
+                        <button key={tIdx.id} onClick={() => { setActiveThemeId(tIdx.id); setShowFilterMenu(false); }} className={`w-full text-left px-4 py-2 text-[10px] hover:bg-white/5 tracking-widest ${activeThemeId === tIdx.id ? 'text-primary' : 'text-white/40'}`}>{tIdx.label.toUpperCase()}</button>
                         ))}
                     </motion.div>
                     )}
@@ -283,38 +279,41 @@ export default function MiniWindow() {
             
             <button 
                 onClick={() => setIsFavoritesOnly(!isFavoritesOnly)}
-                className={`p-1.5 rounded-md transition-all border ${isFavoritesOnly ? 'bg-yellow-500/20 border-yellow-500/40 text-yellow-500' : 'bg-white/5 border-white/10 text-white/20 hover:text-white/40'}`}
-                title="Favoris seulement"
+                className={`p-1 text-xs rounded-md transition-all border ${isFavoritesOnly ? 'bg-yellow-500/20 border-yellow-500/40 text-yellow-500' : 'bg-white/5 border-white/10 text-white/20 hover:text-white/40'}`}
+                title={t('favorites_only')}
             >
                 ⭐
             </button>
           </div>
-          <span className="text-[10px] font-bold text-white/10 tracking-widest uppercase">{prompts.length} ÉLÉMENTS</span>
+          <span className="text-[10px] font-bold text-white/5 tracking-widest uppercase">{prompts.length} {t('items_count')}</span>
         </div>
 
         {/* LIST */}
-        <ResultsList prompts={prompts} focusedIdx={focusedIdx} themes={themes} query={debouncedQuery} onSetFocusedIdx={setFocusedIdx} onHandleCopy={handleCopy} onContextMenu={onContextMenu} />
+        <ResultsList prompts={prompts} focusedIdx={focusedIdx} themes={themes} query={debouncedQuery} onSetFocusedIdx={setFocusedIdx} onHandleCopy={handleCopy} onContextMenu={onContextMenu} t={t} />
 
-        {/* Status Bar - Added Open Main Button */}
-        <div className="px-5 py-2.5 flex items-center justify-between text-[10px] uppercase tracking-tighter text-white/30 border-t border-white/5 bg-[#23232b]/30">
+        {/* Status Bar */}
+        <div className="px-5 py-2.5 flex items-center justify-between text-[10px] uppercase tracking-tighter text-white/10 border-t border-white/5 bg-[#23232b]/20">
            <div className="truncate flex-1">
-                <span className="text-secondary opacity-50 font-bold mr-2">PREC TO COPY :</span> 
-                <span className="text-white/60 font-medium">{activePrompt?.title || '---'}</span>
+                <span className="opacity-40 font-bold mr-2">{t('prev_to_copy').toUpperCase()}</span> 
+                <span className="text-white/30 font-medium">{activePrompt?.title || '---'}</span>
            </div>
-           <button 
-                onClick={handleOpenMain}
-                className="ml-4 px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-colors flex items-center gap-1.5 border border-white/5 shadow-sm"
-                title="Ouvrir l'application complète"
-           >
-                <span className="text-xs">🖥️</span>
-           </button>
+           
+           <div className="flex items-center gap-3">
+                <button 
+                    onClick={handleOpenMain}
+                    className="p-1 rounded bg-white/5 hover:bg-white/10 text-white/20 hover:text-white transition-colors border border-white/5 shadow-sm"
+                    title={t('actions.open_main')}
+                >
+                    🖥️
+                </button>
+           </div>
         </div>
       </div>
 
       <div onMouseDown={handleMouseDown} className="w-1.5 h-full cursor-col-resize hover:bg-primary/40 transition-colors flex items-center justify-center group z-20"><div className="w-[1px] h-12 bg-white/5 group-hover:bg-primary/60" /></div>
 
       {/* EDITOR */}
-      <EditorPane activePrompt={activePrompt} editedBody={editedBody} onSetEditedBody={setEditedBody} onSave={handleSave} isSaving={isSaving} />
+      <EditorPane activePrompt={activePrompt} editedBody={editedBody} onSetEditedBody={setEditedBody} onSave={handleSave} isSaving={isSaving} t={t} />
 
       <AnimatePresence>
         {contextMenu && (
@@ -322,10 +321,10 @@ export default function MiniWindow() {
             style={{ left: contextMenu.x, top: contextMenu.y }}
             className="fixed w-52 bg-[#2a2a35] border border-white/10 rounded-2xl shadow-2xl z-[100] overflow-hidden py-2" onClick={(e) => e.stopPropagation()}
           >
-            <div className="px-5 py-1.5 text-[10px] font-black text-white/20 uppercase tracking-widest border-b border-white/5 mb-2">Options Prompt</div>
-            <button onClick={() => handleCopy(contextMenu.prompt)} className="w-full text-left px-5 py-2.5 text-xs text-white hover:bg-primary/20 hover:text-primary transition-colors flex items-center gap-4 font-bold"><span>📋</span> COPIER</button>
+            <div className="px-5 py-1.5 text-[10px] font-black text-white/20 uppercase tracking-widest border-b border-white/5 mb-2">{t('filter')}</div>
+            <button onClick={() => handleCopy(contextMenu.prompt)} className="w-full text-left px-5 py-2.5 text-xs text-white hover:bg-primary/20 hover:text-primary transition-colors flex items-center gap-4 font-bold"><span>📋</span> {t('actions.copy').toUpperCase()}</button>
             <div className="h-px bg-white/5 my-1 mx-3" />
-            <button onClick={async () => { if (confirm(`Supprimer "${contextMenu.prompt.title}" ?`)) { await window.vault.prompts.delete(contextMenu.prompt.id); setContextMenu(null); bumpPromptsVersion(); } }} className="w-full text-left px-5 py-2.5 text-xs text-red-400 hover:bg-red-400/10 transition-colors flex items-center gap-4 font-bold"><span>🗑</span> SUPPRIMER</button>
+            <button onClick={async () => { if (confirm(t('actions.confirm_delete', { title: contextMenu.prompt.title }))) { await window.vault.prompts.delete(contextMenu.prompt.id); setContextMenu(null); bumpPromptsVersion(); } }} className="w-full text-left px-5 py-2.5 text-xs text-red-400 hover:bg-red-400/10 transition-colors flex items-center gap-4 font-bold"><span>🗑</span> {t('actions.delete').toUpperCase()}</button>
           </motion.div>
         )}
       </AnimatePresence>

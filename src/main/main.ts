@@ -12,11 +12,18 @@ let importWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let currentShortcuts: ShortcutMap = loadShortcuts();
 
-// Icône 16×16 violette (#6C63FF) encodée en PNG base64 — générée programmatiquement
+// Icône 16×16 violette (#6C63FF) en fallback
 const TRAY_ICON_B64 = 'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGUlEQVR4nGPISf7/nxLMMGrAqAGjBgwXAwCW0c0fT6XdgwAAAABJRU5ErkJggg==';
 
 function createTrayIcon(): void {
-  const icon = nativeImage.createFromDataURL(`data:image/png;base64,${TRAY_ICON_B64}`);
+  const iconPath = app.isPackaged 
+    ? path.join(process.resourcesPath, 'icon.ico') 
+    : path.join(__dirname, '../../resources/icon.ico');
+    
+  const icon = fs.existsSync(iconPath) 
+    ? nativeImage.createFromPath(iconPath)
+    : nativeImage.createFromDataURL(`data:image/png;base64,${TRAY_ICON_B64}`);
+    
   tray = new Tray(icon);
   tray.setToolTip('PromptVault');
 
@@ -27,8 +34,8 @@ function createTrayIcon(): void {
         setTimeout(() => mainWindow?.webContents.send('shortcut:open-settings'), 200);
     }},
     { type: 'separator' },
-    { label: '⚡ Mini-fenêtre (Alt+P)', click: () => { const w = getOrCreateMiniWindow(); w.show(); w.focus(); } },
-    { label: '✏️ Capture rapide (Alt+N)', click: () => { const w = getOrCreateQuickCapture(); w.show(); w.focus(); } },
+    { label: `⚡ Mini-Hub (${currentShortcuts.toggleMini})`, click: () => { const w = getOrCreateMiniWindow(); w.show(); w.focus(); } },
+    { label: `✏️ Capture rapide (${currentShortcuts.quickCapture})`, click: () => { const w = getOrCreateQuickCapture(); w.show(); w.focus(); } },
     { type: 'separator' },
     { label: '❌ Quitter', click: () => { app.isQuitting = true; tray?.destroy(); app.quit(); } },
   ]);
@@ -131,15 +138,19 @@ export function showMainWindow(page?: string): void {
   }
 }
 
-export function registerShortcuts(shortcuts: ShortcutMap = currentShortcuts): void {
+export function registerShortcuts(shortcuts: ShortcutMap = currentShortcuts): { success: boolean, errors: string[] } {
   globalShortcut.unregisterAll();
   currentShortcuts = shortcuts;
+  const errors: string[] = [];
 
-  const tryRegister = (accelerator: string | undefined, callback: () => void) => {
+  const tryRegister = (accelerator: string | undefined, callback: () => void, label: string) => {
     if (!accelerator || accelerator.trim() === '') return;
     try {
-      globalShortcut.register(accelerator, callback);
-    } catch { /* ignore invalid shortcut */ }
+      const ok = globalShortcut.register(accelerator, callback);
+      if (!ok) errors.push(label);
+    } catch { 
+      errors.push(label);
+    }
   };
 
   tryRegister(shortcuts.toggleMini, () => {
@@ -154,7 +165,7 @@ export function registerShortcuts(shortcuts: ShortcutMap = currentShortcuts): vo
       win.focus();
       win.setAlwaysOnTop(true, 'screen-saver');
     }
-  });
+  }, 'Launcher Hub');
 
   tryRegister(shortcuts.quickCapture, () => {
     const win = getOrCreateQuickCapture();
@@ -166,21 +177,26 @@ export function registerShortcuts(shortcuts: ShortcutMap = currentShortcuts): vo
       win.focus();
       win.setAlwaysOnTop(true, 'screen-saver');
     }
-  });
+  }, 'Quick Capture');
 
   tryRegister(shortcuts.focusSearch, () => {
     showMainWindow();
     mainWindow?.webContents.send('shortcut:focus-search');
-  });
+  }, 'Focus Search');
 
   tryRegister(shortcuts.openMain, () => {
     showMainWindow();
-  });
+  }, 'Open Main App');
+
+  // Mise à jour du menu Tray car les noms de raccourcis ont pu changer
+  createTrayIcon();
+
+  return { success: errors.length === 0, errors };
 }
 
-export function updateShortcuts(shortcuts: ShortcutMap): void {
+export function updateShortcuts(shortcuts: ShortcutMap): { success: boolean, errors: string[] } {
   saveShortcuts(shortcuts);
-  registerShortcuts(shortcuts);
+  return registerShortcuts(shortcuts);
 }
 
 export { currentShortcuts };

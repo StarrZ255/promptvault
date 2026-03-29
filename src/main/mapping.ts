@@ -65,6 +65,50 @@ export interface MappedPrompt {
   updated_at: string;
 }
 
+export function suggestPromptFromText(content: string): { title: string; body: string; suggestedTheme: string; suggestedTags: string[] } {
+  const lines = content.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  const firstLine = lines[0] || '';
+  const title = firstLine.length > 60 ? firstLine.slice(0, 57) + '...' : firstLine;
+  
+  const lower = content.toLowerCase();
+  let theme = 'autre';
+  const tags: string[] = [];
+
+  // Logic: Keywords detection
+  if (lower.includes('function') || lower.includes('const ') || lower.includes('import ') || lower.includes('return ') || lower.includes('code ') || lower.includes('script')) {
+    theme = 'code';
+    tags.push('Développement');
+  } else if (lower.includes('analyse') || lower.includes('extraire') || lower.includes('données') || lower.includes('synthèse') || lower.includes('rapport')) {
+    theme = 'recherche';
+    tags.push('Analyse');
+  } else if (lower.includes('écrire') || lower.includes('rédiger') || lower.includes('email') || lower.includes('brouillon') || lower.includes('article') || lower.includes('blog')) {
+    theme = 'redaction';
+    tags.push('Contenu');
+  } else if (lower.includes('histoire') || lower.includes('créatif') || lower.includes('personnage') || lower.includes('poème') || lower.includes('art')) {
+    theme = 'creativite';
+    tags.push('Créatif');
+  } else if (lower.includes('business') || lower.includes('stratégie') || lower.includes('marché') || lower.includes('client')) {
+    theme = 'business';
+    tags.push('Audit');
+  } else if (lower.includes('sécurité') || lower.includes('mots de passe') || lower.includes('hack') || lower.includes('protection')) {
+    theme = 'securite';
+    tags.push('Sécurité');
+  } else if (lower.includes('apprendre') || lower.includes('cours') || lower.includes('éducation') || lower.includes('étude')) {
+    theme = 'apprentissage';
+    tags.push('Étude');
+  } else if (lower.includes('agenda') || lower.includes('organisation') || lower.includes('tâche') || lower.includes('efficace')) {
+    theme = 'productivite';
+    tags.push('Efficacité');
+  }
+
+  return {
+    title,
+    body: content,
+    suggestedTheme: theme,
+    suggestedTags: tags,
+  };
+}
+
 export function mapPrompt(raw: RawPrompt): MappedPrompt {
   const body = raw.content ?? raw.body ?? '';
   const context = raw.context ?? [];

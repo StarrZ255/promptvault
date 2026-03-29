@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useApp } from '../App';
 import { useToast } from './Toast';
 import type { Theme, ImportReport } from '../types';
 import keywords from '../../../resources/keywords.json';
@@ -25,6 +26,7 @@ function extractTitle(text: string): string {
 }
 
 export default function ImportWindow() {
+  const { t, bumpPromptsVersion } = useApp();
   const [mode, setMode] = useState<'paste' | 'json'>('paste');
   const [text, setText] = useState('');
   const [title, setTitle] = useState('');
@@ -35,7 +37,7 @@ export default function ImportWindow() {
   const { toast } = useToast();
 
   useEffect(() => {
-    window.vault.themes.getAll().then(t => setThemes(t as Theme[]));
+    window.vault.themes.getAll().then(tItem => setThemes(tItem as Theme[]));
   }, []);
 
   const handleAnalyze = () => {
@@ -48,8 +50,9 @@ export default function ImportWindow() {
   const handleSavePaste = async () => {
     if (!title.trim() || !text.trim()) return;
     await window.vault.prompts.create({ title, body: text, theme, tags: extractTags(text) });
-    toast('Prompt importé ✓');
-    window.vault.window.closeWindow();
+    bumpPromptsVersion();
+    toast(t('toasts.prompt_saved'));
+    window.vault.window.close();
   };
 
   const handleImportJson = async () => {
@@ -57,62 +60,72 @@ export default function ImportWindow() {
     if (!path) return;
     const r = await window.vault.import.fromJson(path);
     setReport(r);
-    toast(`${r.imported} prompts importés`);
+    bumpPromptsVersion();
+    toast(t('import_window.report_imported', { count: String(r.imported) }));
   };
 
   return (
-    <div className="flex flex-col h-screen bg-surface p-4 gap-3">
+    <div className="flex flex-col h-screen bg-surface p-6 gap-4 font-['Inter'] overflow-hidden">
       <div className="flex items-center justify-between" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
-        <h2 className="font-display text-sm font-bold text-primary">Import rapide</h2>
-        <button onClick={() => window.vault.window.closeWindow()} className="text-muted hover:text-text text-xs" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>✕</button>
+        <h2 className="text-xs font-black uppercase tracking-[0.2em] text-primary">{t('import_window.title')}</h2>
+        <button onClick={() => window.vault.window.close()} className="p-1 px-2 rounded-lg hover:bg-white/5 text-muted transition-colors" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>✕</button>
       </div>
 
       <div className="flex gap-2">
         {(['paste', 'json'] as const).map(m => (
           <button key={m} onClick={() => setMode(m)}
-            className={`px-3 py-1.5 text-sm rounded-lg ${mode === m ? 'bg-primary text-white' : 'bg-bg border border-border text-muted hover:text-text'}`}>
-            {m === 'paste' ? 'Coller du texte' : 'Fichier JSON'}
+            className={`px-4 py-2.5 text-xs font-black uppercase tracking-widest rounded-xl transition-all border
+              ${mode === m ? 'bg-primary border-primary text-white shadow-lg shadow-primary/20 scale-105' : 'bg-surface border-border text-muted hover:text-text hover:bg-white/5'}`}>
+            {m === 'paste' ? t('import_window.paste_mode') : t('import_window.json_mode')}
           </button>
         ))}
       </div>
 
-      {mode === 'paste' ? (
-        <>
-          <textarea value={text} onChange={e => { setText(e.target.value); setAnalyzed(false); }} rows={6}
-            placeholder="Collez votre prompt ici (Ctrl+V)…"
-            className="bg-bg border border-border rounded-lg px-3 py-2 text-sm text-text focus:outline-none focus:border-primary resize-none" />
-          {!analyzed ? (
-            <button onClick={handleAnalyze} className="px-4 py-2 bg-secondary/20 text-secondary text-sm rounded-lg hover:bg-secondary hover:text-bg">
-              Analyser et suggérer ➜
-            </button>
-          ) : (
+      <div className="flex-1 flex flex-col gap-4 overflow-y-auto no-scrollbar">
+          {mode === 'paste' ? (
             <>
-              <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="Titre"
-                className="bg-bg border border-border rounded-lg px-3 py-2 text-sm text-text focus:outline-none focus:border-primary" />
-              <select value={theme} onChange={e => setTheme(e.target.value)}
-                className="bg-bg border border-border rounded-lg px-3 py-2 text-sm text-text focus:outline-none focus:border-primary">
-                {themes.map(t => <option key={t.id} value={t.id}>{t.icon} {t.label}</option>)}
-              </select>
-              <button onClick={handleSavePaste} className="px-4 py-2 bg-primary text-white text-sm rounded-lg hover:bg-primary/80">
-                Sauvegarder (Ctrl+Enter)
-              </button>
+              <textarea value={text} onChange={e => { setText(e.target.value); setAnalyzed(false); }} rows={8}
+                placeholder={t('placeholders.paste_prompt')}
+                className="bg-bg border border-border rounded-xl px-4 py-3 text-sm text-text focus:outline-none focus:border-primary resize-none font-sans leading-relaxed shadow-inner" />
+              {!analyzed ? (
+                <button onClick={handleAnalyze} className="w-full py-3.5 bg-secondary text-bg text-xs font-black uppercase tracking-widest rounded-xl hover:bg-secondary/90 transition-all shadow-lg active:scale-95">
+                  {t('import_window.analyze_btn')}
+                </button>
+              ) : (
+                <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                  <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder={t('placeholders.no_title')}
+                    className="w-full bg-bg border border-border rounded-xl px-4 py-3 text-sm font-bold text-text focus:outline-none focus:border-primary shadow-inner" />
+                  <select value={theme} onChange={e => setTheme(e.target.value)}
+                    className="w-full bg-bg border border-border rounded-xl px-4 py-2.5 text-xs font-bold text-text focus:outline-none focus:border-primary appearance-none cursor-pointer">
+                    {themes.map(tItem => <option key={tItem.id} value={tItem.id}>{tItem.icon} {tItem.label.toUpperCase()}</option>)}
+                  </select>
+                  <button onClick={handleSavePaste} className="w-full py-3.5 bg-primary text-white text-xs font-black uppercase tracking-widest rounded-xl hover:bg-primary/80 transition-all shadow-lg shadow-primary/20 active:scale-95">
+                    {t('actions.save')}
+                  </button>
+                </div>
+              )}
             </>
-          )}
-        </>
-      ) : (
-        <>
-          <button onClick={handleImportJson} className="px-4 py-2 bg-primary text-white text-sm rounded-lg hover:bg-primary/80">
-            Sélectionner un fichier JSON…
-          </button>
-          {report && (
-            <div className="bg-bg rounded-lg p-3 text-sm space-y-1">
-              <div className="text-secondary font-medium">{report.imported} importés</div>
-              {report.perfectDuplicates > 0 && <div className="text-muted">· {report.perfectDuplicates} doublons parfaits ignorés</div>}
-              {report.titleDuplicates > 0 && <div className="text-muted">· {report.titleDuplicates} doublons de titre</div>}
+          ) : (
+            <div className="flex-1 flex flex-col gap-6 items-center justify-center p-8 bg-bg/20 border-2 border-dashed border-border rounded-3xl">
+              <span className="text-6xl opacity-20">📂</span>
+              <button onClick={handleImportJson} className="px-8 py-3.5 bg-primary text-white text-xs font-black uppercase tracking-widest rounded-xl hover:bg-primary/80 transition-all shadow-xl shadow-primary/20 active:scale-95">
+                {t('import_window.select_json')}
+              </button>
+              {report && (
+                <div className="w-full bg-bg rounded-2xl p-6 border border-border shadow-inner space-y-3 animate-in zoom-in duration-200">
+                  <div className="flex items-center justify-between text-xs font-black uppercase tracking-[0.2em] text-secondary">
+                    <span>{t('filter')}</span>
+                    <span className="bg-secondary/10 px-2 py-1 rounded-lg">OK</span>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="text-sm font-bold text-text">· {t('import_window.report_imported', { count: String(report.imported) })}</div>
+                    {report.perfectDuplicates > 0 && <div className="text-xs text-muted/60">· {t('import_window.report_duplicates', { count: String(report.perfectDuplicates) })}</div>}
+                  </div>
+                </div>
+              )}
             </div>
           )}
-        </>
-      )}
+      </div>
     </div>
   );
 }

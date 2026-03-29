@@ -108,7 +108,7 @@ function getSeedsDir(): string {
 
 function seedBuiltinPrompts(): void {
   const seedDir = getSeedsDir();
-  const files = ['temp_gemini.json', 'temp_notebooklm.json', 'temp_openai.json'];
+  const files = ['assistant_pro.json', 'recherche_expertise.json', 'creative_hub.json'];
   const insert = db.prepare(INSERT_PROMPT_SQL);
 
   const seedMany = db.transaction((rows: MappedPrompt[]) => {
@@ -310,14 +310,28 @@ export function importFromJson(filePath: string): { imported: number; perfectDup
   const errors: string[] = [];
 
   const insertStmt = db.prepare(INSERT_PROMPT_SQL);
-  const checkSha   = db.prepare(`SELECT title FROM prompts WHERE sha256 = ?`);
+  const checkSha   = db.prepare(`SELECT id, title, deleted FROM prompts WHERE sha256 = ?`);
   const checkTitle = db.prepare(`SELECT id FROM prompts WHERE LOWER(title) = LOWER(?)`);
+  const restoreStmt = db.prepare(`UPDATE prompts SET deleted = 0, deleted_at = NULL WHERE id = ?`);
 
   const doImport = db.transaction(() => {
     for (const item of raw) {
       try {
         const mapped = mapPrompt(item);
-        if (checkSha.get(mapped.sha256)) { perfectDuplicates++; continue; }
+        const existing = checkSha.get(mapped.sha256) as { id: string, title: string, deleted: number } | undefined;
+        
+        if (existing) {
+          if (existing.deleted === 1) {
+            // Le prompt existe mais est dans la corbeille -> On le restaure
+            restoreStmt.run(existing.id);
+            imported++;
+          } else {
+            // Le prompt existe déjà et est actif -> Doublon parfait ignoré
+            perfectDuplicates++;
+          }
+          continue;
+        }
+
         if (checkTitle.get(mapped.title)) titleDuplicates++;
         const result = insertStmt.run(mapped);
         if (result.changes > 0) imported++;

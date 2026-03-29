@@ -3,6 +3,7 @@ import * as db from './database';
 import fs from 'fs';
 import path from 'path';
 import { pathToFileURL } from 'url';
+import { suggestPromptFromText } from './mapping';
 import type { ShortcutMap } from './shortcuts';
 
 export function registerHandlers(
@@ -11,7 +12,7 @@ export function registerHandlers(
   getMiniWin: () => BrowserWindow,
   showMain: () => void,
   getShortcuts: () => ShortcutMap,
-  updateShortcuts: (s: ShortcutMap) => void,
+  updateShortcuts: (s: ShortcutMap) => { success: boolean, errors: string[] },
 ): void {
   // ─── Prompts ────────────────────────────────────────────────────────────────
   ipcMain.handle('prompts:getAll',            (_, filter) => db.getPrompts(filter));
@@ -56,9 +57,7 @@ export function registerHandlers(
 
   // ─── Import / Export ────────────────────────────────────────────────────────
   ipcMain.handle('import:fromJson', async (_, filePath: string) => db.importFromJson(filePath));
-  ipcMain.handle('import:fromPaste', async (_, content: string) => ({
-    title: '', body: content, suggestedTheme: 'autre', suggestedTags: [],
-  }));
+  ipcMain.handle('import:fromPaste', async (_, content: string) => suggestPromptFromText(content));
   ipcMain.handle('export:toJson', async (_, ids?: string[]) => {
     const json = db.exportToJson(ids);
     const result = await dialog.showSaveDialog({
@@ -100,8 +99,7 @@ export function registerHandlers(
   // ─── Raccourcis ─────────────────────────────────────────────────────────────
   ipcMain.handle('shortcuts:get', () => getShortcuts());
   ipcMain.handle('shortcuts:set', (_, shortcuts: ShortcutMap) => {
-    updateShortcuts(shortcuts);
-    return shortcuts;
+    return updateShortcuts(shortcuts);
   });
 
   // ─── Fenêtres ───────────────────────────────────────────────────────────────

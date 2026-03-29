@@ -1,4 +1,5 @@
 import React from 'react';
+import { useApp } from '../App';
 
 interface Props {
   title?: string;
@@ -6,6 +7,7 @@ interface Props {
 }
 
 export default function TitleBar({ title = 'PromptVault', hideControls = false }: Props) {
+  const { t } = useApp();
   const handleMinimize = () => window.vault.window.minimize();
   const handleMaximize = () => window.vault.window.maximize();
   const handleClose = () => window.vault.window.close();
@@ -17,7 +19,7 @@ export default function TitleBar({ title = 'PromptVault', hideControls = false }
     >
       <div className="flex items-center px-3 gap-2">
         <div className="w-3 h-3 bg-primary rounded-full" />
-        <span className="text-[10px] font-bold uppercase tracking-widest text-muted font-display">{title}</span>
+        <span className="text-[10px] font-black uppercase tracking-widest text-muted font-display">{title}</span>
       </div>
 
       {!hideControls && (
@@ -25,21 +27,21 @@ export default function TitleBar({ title = 'PromptVault', hideControls = false }
           <button 
             onClick={handleMinimize}
             className="w-10 h-full flex items-center justify-center hover:bg-white/5 text-muted hover:text-text transition-colors"
-            title="Réduire"
+            title={t('actions.minimize')}
           >
             <span className="text-xs">─</span>
           </button>
           <button 
             onClick={handleMaximize}
             className="w-10 h-full flex items-center justify-center hover:bg-white/5 text-muted hover:text-text transition-colors"
-            title="Agrandir"
+            title={t('actions.maximize')}
           >
             <span className="text-[10px]">▢</span>
           </button>
           <button 
             onClick={handleClose}
             className="w-10 h-full flex items-center justify-center hover:bg-red-500/10 text-muted hover:text-red-400 transition-colors"
-            title="Fermer"
+            title={t('actions.close')}
           >
             <span className="text-sm">✕</span>
           </button>

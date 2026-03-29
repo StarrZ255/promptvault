@@ -102,7 +102,7 @@ export interface VaultAPI {
   };
   shortcuts: {
     get: () => Promise<{ toggleMini: string; quickCapture: string; focusSearch: string; openMain: string }>;
-    set: (s: { toggleMini: string; quickCapture: string; focusSearch: string; openMain: string }) => Promise<void>;
+    set: (s: { toggleMini: string; quickCapture: string; focusSearch: string; openMain: string }) => Promise<{ success: boolean; errors: string[] }>;
   };
   startup: {
     get: () => Promise<boolean>;

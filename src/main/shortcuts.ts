@@ -10,7 +10,7 @@ export interface ShortcutMap {
 }
 
 export const DEFAULT_SHORTCUTS: ShortcutMap = {
-  toggleMini:   'Alt+P',
+  toggleMini:   'Ctrl+Shift+P',
   quickCapture: 'Alt+N',
   focusSearch:  'Alt+F',
   openMain:     'Alt+O',

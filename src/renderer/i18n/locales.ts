@@ -1,0 +1,214 @@
+export const locales = {
+  fr: {
+    search: "Rechercher...",
+    filter: "FILTRE",
+    all_categories: "Toutes les catégories",
+    items_count: "ÉLÉMENTS",
+    no_results: "Aucun résultat trouvé",
+    prev_to_copy: "Prêt à copier :",
+    shortcuts: {
+      navigation: "Navigation",
+      action: "Action",
+      shortcut: "Raccourci",
+      nav_arrows: "↑↓ Flèches",
+      action_enter: "↵ Copier",
+      save_ctrl_s: "CTRL + S"
+    },
+    actions: {
+      save: "SAUVEGARDER",
+      saved: "✓ ENREGISTRÉ",
+      copy: "COPIER",
+      delete: "SUPPRIMER",
+      confirm_delete: "Supprimer \"{{title}}\" ?",
+      confirm_perm_delete: "Supprimer définitivement ? Cette action est irréversible.",
+      confirm_empty_trash: "Vider la corbeille ? Tous les prompts seront perdus.",
+      open_main: "Ouvrir l'application complète",
+      ok: "OK",
+      create: "CRÉER",
+      restore: "RESTAURER",
+      empty_trash: "Vider la corbeille",
+      new_prompt: "+ Nouveau",
+      cancel: "Annuler",
+      minimize: "Réduire",
+      maximize: "Agrandir",
+      close: "Fermer"
+    },
+    placeholders: {
+      empty_body: "Le corps du prompt est vide...",
+      select_prompt: "Hub de Productivité",
+      theme_name: "Nom de la catégorie...",
+      search_full: "Rechercher... (titre, contenu, tags)",
+      empty_trash_msg: "La corbeille est vide",
+      no_title: "Sans titre",
+      search_commands: "Rechercher une commande...",
+      paste_prompt: "Collez votre prompt ici (Ctrl+V)..."
+    },
+    favorites_only: "Favoris seulement",
+    other_category: "AUTRE",
+    hash_id: "RÉF",
+    sidebar: {
+      all_prompts: "Tous les prompts",
+      favorites: "Favoris",
+      trash: "Corbeille",
+      themes: "Thématiques",
+      add_theme: "Ajouter une thématique",
+      light_mode: "Mode clair",
+      dark_mode: "Mode sombre",
+      settings: "Paramètres"
+    },
+    settings: {
+      title: "Paramètres",
+      description: "Coffre-fort local et sécurisé pour vos prompts. Toutes les données sont stockées sur votre machine (SQLite).",
+      language: "Langue",
+      theme: "Apparence",
+      shortcuts: "Raccourcis clavier",
+      general: "Général",
+      close: "Fermer"
+    },
+    toasts: {
+      theme_created: "Thématique créée ✓",
+      theme_updated: "Thématique modifiée ✓",
+      theme_deleted: "Thématique supprimée",
+      prompt_saved: "Prompt enregistré ✓",
+      prompt_restored: "Prompt restauré ✓",
+      trash_emptied: "Corbeille vidée",
+      perm_deleted: "Supprimé définitivement",
+      exported: "Exporté vers {{path}}"
+    },
+    editor: {
+      title_label: "Titre du prompt",
+      body_label: "Contenu",
+      category_label: "Catégorie",
+      tags_label: "Tags",
+      target_ai_label: "IA Cibles",
+      save_btn: "Enregistrer les modifications"
+    },
+    commands: {
+      import: "Importer un fichier JSON",
+      export: "Exporter tout en JSON",
+      capture: "Capture rapide",
+      favorites: "Afficher les favoris",
+      all: "Tous les prompts"
+    },
+    quick_capture: {
+      title: "Capture rapide",
+      save_btn: "Sauvegarder (Ctrl+Enter)"
+    },
+    import_window: {
+      title: "Import rapide",
+      paste_mode: "Coller du texte",
+      json_mode: "Fichier JSON",
+      analyze_btn: "Analyser et suggérer ➜",
+      select_json: "Sélectionner un fichier JSON...",
+      report_imported: "{{count}} importés",
+      report_duplicates: "{{count}} doublons ignorés"
+    }
+  },
+  en: {
+    search: "Search...",
+    filter: "FILTER",
+    all_categories: "All Categories",
+    items_count: "ITEMS",
+    no_results: "No results found",
+    prev_to_copy: "Ready to copy:",
+    shortcuts: {
+      navigation: "Navigation",
+      action: "Action",
+      shortcut: "Shortcut",
+      nav_arrows: "↑↓ Arrows",
+      action_enter: "↵ Copy",
+      save_ctrl_s: "CTRL + S"
+    },
+    actions: {
+      save: "SAVE",
+      saved: "✓ SAVED",
+      copy: "COPY",
+      delete: "DELETE",
+      confirm_delete: "Delete \"{{title}}\"?",
+      confirm_perm_delete: "Permanently delete? This cannot be undone.",
+      confirm_empty_trash: "Empty trash? All prompts will be lost forever.",
+      open_main: "Open Full Application",
+      ok: "OK",
+      create: "CREATE",
+      restore: "RESTORE",
+      empty_trash: "Empty Trash",
+      new_prompt: "+ New",
+      cancel: "Cancel",
+      minimize: "Minimize",
+      maximize: "Maximize",
+      close: "Close"
+    },
+    placeholders: {
+      empty_body: "The prompt body is empty...",
+      select_prompt: "Productivity Hub",
+      theme_name: "Category name...",
+      search_full: "Search... (title, content, tags)",
+      empty_trash_msg: "Trash is empty",
+      no_title: "Untitled",
+      search_commands: "Search commands...",
+      paste_prompt: "Paste your prompt here (Ctrl+V)..."
+    },
+    favorites_only: "Favorites only",
+    other_category: "OTHER",
+    hash_id: "REF",
+    sidebar: {
+      all_prompts: "All prompts",
+      favorites: "Favorites",
+      trash: "Trash",
+      themes: "Categories",
+      add_theme: "Add a category",
+      light_mode: "Light mode",
+      dark_mode: "Dark mode",
+      settings: "Settings"
+    },
+    settings: {
+      title: "Settings",
+      description: "Secure local safe for your prompts. All data is stored on your machine (SQLite).",
+      language: "Language",
+      theme: "Appearance",
+      shortcuts: "Keyboard shortcuts",
+      general: "General",
+      close: "Close"
+    },
+    toasts: {
+      theme_created: "Category created ✓",
+      theme_updated: "Category updated ✓",
+      theme_deleted: "Category deleted",
+      prompt_saved: "Prompt saved ✓",
+      prompt_restored: "Prompt restored ✓",
+      trash_emptied: "Trash emptied",
+      perm_deleted: "Permanently deleted",
+      exported: "Exported to {{path}}"
+    },
+    editor: {
+      title_label: "Prompt Title",
+      body_label: "Content",
+      category_label: "Category",
+      tags_label: "Tags",
+      target_ai_label: "Target AIs",
+      save_btn: "Save changes"
+    },
+    commands: {
+      import: "Import JSON file",
+      export: "Export all to JSON",
+      capture: "Quick capture",
+      favorites: "Show favorites",
+      all: "All prompts"
+    },
+    quick_capture: {
+      title: "Quick Capture",
+      save_btn: "Save (Ctrl+Enter)"
+    },
+    import_window: {
+      title: "Quick Import",
+      paste_mode: "Paste text",
+      json_mode: "JSON File",
+      analyze_btn: "Analyze & Suggest ➜",
+      select_json: "Select JSON file...",
+      report_imported: "{{count}} imported",
+      report_duplicates: "{{count}} duplicates ignored"
+    }
+  }
+};
+
+export type Language = keyof typeof locales;

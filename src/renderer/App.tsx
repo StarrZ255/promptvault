@@ -9,6 +9,7 @@ import TitleBar from './components/TitleBar';
 import SettingsModal from './components/SettingsModal';
 import CommandPalette from './components/CommandPalette';
 import { ToastProvider } from './components/Toast';
+import { locales, type Language } from './i18n/locales';
 import type { Prompt, SearchFilter, Theme } from './types';
 
 // ─── Error Boundary ───────────────────────────────────────────────────────────
@@ -53,6 +54,9 @@ interface AppState {
   toggleTheme: () => void;
   showCommandPalette: boolean;
   setShowCommandPalette: (v: boolean) => void;
+  language: Language;
+  setLanguage: (l: Language) => void;
+  t: (key: string, data?: Record<string, string>) => string;
 }
 
 export const AppContext = createContext<AppState>({} as AppState);
@@ -126,6 +130,18 @@ export default function App() {
   const [isDark, setIsDark] = useState(true);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [promptsVersion, setPromptsVersion] = useState(0);
+  const [language, setLanguage] = useState<Language>('fr');
+
+  const t = useCallback((key: string, data?: Record<string, string>) => {
+    const parts = key.split('.');
+    let obj: any = locales[language];
+    for (const part of parts) { if (obj) obj = obj[part]; }
+    let res = (obj as string) || key;
+    if (data) {
+      Object.entries(data).forEach(([k, v]) => { res = res.replace(`{{${k}}}`, v); });
+    }
+    return res;
+  }, [language]);
 
   const bumpPromptsVersion = useCallback(() => setPromptsVersion(v => v + 1), []);
   const toggleTheme = useCallback(() => setIsDark(d => !d), []);
@@ -161,6 +177,7 @@ export default function App() {
     promptsVersion, bumpPromptsVersion,
     isDark, toggleTheme,
     showCommandPalette, setShowCommandPalette: setShowCommandPaletteCallback,
+    language, setLanguage, t,
   }), [
     selectedPrompt, setSelectedPrompt,
     filter, setFilter,
@@ -168,6 +185,7 @@ export default function App() {
     promptsVersion, bumpPromptsVersion,
     isDark, toggleTheme,
     showCommandPalette, setShowCommandPaletteCallback,
+    language, t,
   ]);
 
   return (

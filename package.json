@@ -49,6 +49,10 @@
         "from": "data/seeds",
         "to": "seeds",
         "filter": ["**/*.json"]
+      },
+      {
+        "from": "resources/keywords.json",
+        "to": "keywords.json"
       }
     ],
     "asar": true,
