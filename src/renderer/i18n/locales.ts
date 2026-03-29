@@ -41,7 +41,8 @@ export const locales = {
       confirm_hide_builtins: "Masquer ou supprimer les prompts par défaut ?",
       hide_builtins: "Masquer (recommandé)",
       delete_builtins_confirm: "Supprimer définitivement",
-      manage_builtins: "Gérer les prompts par défaut"
+      manage_builtins: "Gérer les prompts par défaut",
+      confirm_delete_theme: "Supprimer \"{{label}}\" ? Ses {{count}} prompt(s) seront déplacés vers \"Autre\"."
     },
     placeholders: {
       empty_body: "Le corps du prompt est vide...",
@@ -167,7 +168,8 @@ export const locales = {
       confirm_hide_builtins: "Hide or delete default prompts?",
       hide_builtins: "Hide (recommended)",
       delete_builtins_confirm: "Delete permanently",
-      manage_builtins: "Manage default prompts"
+      manage_builtins: "Manage default prompts",
+      confirm_delete_theme: "Delete \"{{label}}\"? Its {{count}} prompt(s) will be moved to \"Other\"."
     },
     placeholders: {
       empty_body: "The prompt body is empty...",

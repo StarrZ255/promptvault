@@ -126,7 +126,8 @@ export default function SettingsModal({ open, onClose }: Props) {
   };
 
   const handleDeleteTheme = async (id: string) => {
-    if (!window.confirm(t('actions.confirm_delete', { title: '' }))) return;
+    const theme = themes.find(th => th.id === id);
+    if (!window.confirm(t('actions.confirm_delete_theme', { label: theme?.label ?? id, count: String(theme?.count ?? 0) }))) return;
     await window.vault.themes.delete(id);
     refreshThemes();
     toast(t('toasts.theme_deleted'));
