@@ -413,10 +413,6 @@ export function emptyTrash(): { deleted: number } {
   return { deleted: result.changes };
 }
 
-export function deleteBuiltinPrompts(): void {
-  db.prepare(`DELETE FROM prompts WHERE is_builtin = 1`).run();
-}
-
 export function restoreBuiltinPrompts(): { restored: number } {
   const before = (db.prepare(`SELECT COUNT(*) as n FROM prompts WHERE is_builtin = 1`).get() as { n: number }).n;
   seedBuiltinPrompts();
